@@ -13,7 +13,7 @@
     --radius:16px;
   }
   body{font-family:'Segoe UI','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
-  
+
   /* header */
   .header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;text-align:center;padding:2rem 1rem 1.5rem;position:relative;overflow:hidden}
   .header::after{content:'';position:absolute;bottom:-30px;left:-10%;width:120%;height:60px;background:var(--bg);border-radius:50% 50% 0 0}
@@ -48,7 +48,7 @@
 
   /* count selector */
   .count-row{display:flex;gap:.6rem;flex-wrap:wrap}
-  .count-btn{flex:1;min-width:60px;padding:.7rem;border:2px solid var(--primary-light);border-radius:12px;background:#fff;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text)}
+  .count-btn{flex:1;min-width:50px;padding:.7rem;border:2px solid var(--primary-light);border-radius:12px;background:#fff;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text)}
   .count-btn.active,.count-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
 
   /* go button */
@@ -56,11 +56,21 @@
   .go-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,138,101,.4)}
   .go-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
 
+  /* cancel button */
+  .cancel-btn{width:100%;padding:.7rem;border:2px solid #ef5350;border-radius:12px;background:#fff;color:#ef5350;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;margin-top:.8rem}
+  .cancel-btn:hover{background:#ffebee}
+
   /* progress / spinner */
-  .progress-area{text-align:center;padding:2rem 0;display:none}
+  .progress-area{text-align:center;padding:1.5rem 0;display:none}
   .spinner{width:48px;height:48px;border:4px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .progress-text{color:var(--text-light);font-size:.95rem}
+  .progress-text{color:var(--text-light);font-size:.95rem;margin-bottom:.8rem}
+  .progress-items{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-top:.6rem}
+  .progress-chip{padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:500;background:#e0e0e0;color:#757575;transition:all .3s}
+  .progress-chip.active{background:#fff3e0;color:#ef6c00;animation:pulse 1.5s ease-in-out infinite}
+  .progress-chip.done{background:#e8f5e9;color:#2e7d32}
+  .progress-chip.error{background:#ffebee;color:#c62828}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 
   /* results */
   .results-area{display:none}
@@ -71,6 +81,10 @@
   .result-card .obj-name{font-weight:600;margin-bottom:.5rem;color:var(--primary-dark);font-size:.95rem}
   .dl-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:background .2s}
   .dl-btn:hover{background:var(--primary-dark)}
+  .retry-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:2px solid var(--accent);border-radius:10px;background:#fff;color:var(--accent);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;margin-top:.4rem}
+  .retry-btn:hover{background:#fff3e0}
+  .dl-all-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.5rem;border:none;border-radius:12px;background:var(--primary-dark);color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s;margin-bottom:1rem}
+  .dl-all-btn:hover{background:#00695c}
 
   /* error */
   .error-box{background:#ffebee;color:#c62828;border-radius:12px;padding:1rem 1.2rem;margin-top:1rem;font-size:.9rem;display:none;line-height:1.5}
@@ -128,9 +142,12 @@
   <div class="card">
     <div class="card-title"><span class="step">2</span> 要切幾個物件？</div>
     <div class="count-row">
+      <button class="count-btn" data-n="1" onclick="pickCount(1)">1 個</button>
       <button class="count-btn" data-n="2" onclick="pickCount(2)">2 個</button>
       <button class="count-btn active" data-n="3" onclick="pickCount(3)">3 個</button>
       <button class="count-btn" data-n="4" onclick="pickCount(4)">4 個</button>
+      <button class="count-btn" data-n="5" onclick="pickCount(5)">5 個</button>
+      <button class="count-btn" data-n="6" onclick="pickCount(6)">6 個</button>
     </div>
   </div>
 
@@ -138,7 +155,7 @@
   <div class="card">
     <div class="card-title"><span class="step">3</span> 開始擷取</div>
     <p style="font-size:.88rem;color:var(--text-light);margin-bottom:.8rem">
-      AI 會辨識照片中的物件，並逐一產生去背圖片。每張圖約需 10-20 秒，請耐心等候 ☕
+      AI 會辨識照片中的物件，並同時產生去背圖片。整體約需 15-30 秒，請耐心等候 ☕
     </p>
     <button class="go-btn" id="goBtn" onclick="startExtraction()">✨ 開始擷取物件</button>
     <div class="error-box" id="errorBox"></div>
@@ -148,12 +165,17 @@
   <div class="progress-area" id="progressArea">
     <div class="spinner"></div>
     <div class="progress-text" id="progressText">正在分析照片中的物件…</div>
+    <div class="progress-items" id="progressItems"></div>
+    <button class="cancel-btn" id="cancelBtn" onclick="cancelExtraction()">✕ 取消擷取</button>
   </div>
 
   <!-- Results -->
   <div class="results-area" id="resultsArea">
     <div class="card">
       <div class="card-title">🎉 擷取完成！</div>
+      <div style="text-align:center">
+        <button class="dl-all-btn" id="dlAllBtn" onclick="downloadAll()" style="display:none">⬇️ 一鍵下載全部</button>
+      </div>
       <div class="result-grid" id="resultGrid"></div>
     </div>
   </div>
@@ -167,6 +189,9 @@
 let imageBase64 = '';
 let imageMime = '';
 let objectCount = 3;
+let abortController = null;
+let lastResults = [];
+let lastObjects = [];
 
 // ── API Key toggle ──
 function toggleKey(){
@@ -179,7 +204,7 @@ function toggleKey(){
   const saved = localStorage.getItem('gemini_api_key');
   if(saved) document.getElementById('apiKey').value = saved;
 })();
-document.getElementById('apiKey').addEventListener('change', function(){
+document.getElementById('apiKey').addEventListener('input', function(){
   localStorage.setItem('gemini_api_key', this.value.trim());
 });
 
@@ -194,14 +219,42 @@ const previewImg  = document.getElementById('previewImg');
 uploadZone.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length) handleFile(ev.dataTransfer.files[0])});
 fileInput.addEventListener('change',()=>{if(fileInput.files.length) handleFile(fileInput.files[0])});
 
+// ── Image compression ──
+function compressImage(dataUrl, maxDim = 1920, quality = 0.85){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let {width, height} = img;
+      if(width <= maxDim && height <= maxDim){
+        resolve(null); // no compression needed
+        return;
+      }
+      const ratio = Math.min(maxDim / width, maxDim / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressed);
+    };
+    img.src = dataUrl;
+  });
+}
+
 function handleFile(file){
   if(!file.type.startsWith('image/')){showError('請上傳圖片檔案');return}
-  imageMime = file.type;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     const dataUrl = e.target.result;
-    imageBase64 = dataUrl.split(',')[1];
-    previewImg.src = dataUrl;
+    // Try to compress if image is large
+    const compressed = await compressImage(dataUrl);
+    const finalUrl = compressed || dataUrl;
+    imageMime = compressed ? 'image/jpeg' : file.type;
+    imageBase64 = finalUrl.split(',')[1];
+    previewImg.src = finalUrl;
     previewWrap.style.display = 'block';
     uploadZone.style.display = 'none';
   };
@@ -228,20 +281,128 @@ function showError(msg){
   setTimeout(()=>box.style.display='none', 8000);
 }
 
+// ── Cancel extraction ──
+function cancelExtraction(){
+  if(abortController){
+    abortController.abort();
+    abortController = null;
+  }
+}
+
 // ── Gemini API call helper ──
-async function callGemini(apiKey, contents, genConfig = {}){
+async function callGemini(apiKey, contents, genConfig = {}, signal){
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
   const body = { contents, generationConfig: genConfig };
   const resp = await fetch(url, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal
   });
   if(!resp.ok){
     const err = await resp.json().catch(()=>({}));
     throw new Error(err?.error?.message || `API 錯誤 (${resp.status})`);
   }
   return resp.json();
+}
+
+// ── Parse JSON from AI response ──
+function extractJSON(text){
+  // Try to find JSON array in response, handling nested brackets
+  const start = text.indexOf('[');
+  if(start === -1) return null;
+  let depth = 0;
+  for(let i = start; i < text.length; i++){
+    if(text[i] === '[') depth++;
+    else if(text[i] === ']') depth--;
+    if(depth === 0) return text.slice(start, i + 1);
+  }
+  return null;
+}
+
+// ── Generate single object image ──
+async function generateObjectImage(apiKey, obj, signal){
+  const genPrompt = `請根據這張照片中的「${obj.name}」（${obj.description}），生成一張乾淨的去背圖片。
+
+要求：
+- 只畫出「${obj.name}」這一個物件，不要其他東西
+- 純白色背景
+- 物件要清晰、完整、置中
+- 風格要盡量還原照片中該物件的真實外觀
+- 圖片品質要高，適合做教材使用`;
+
+  const genResult = await callGemini(apiKey, [{
+    role: 'user',
+    parts: [
+      { inlineData: { mimeType: imageMime, data: imageBase64 } },
+      { text: genPrompt }
+    ]
+  }], { responseModalities: ['TEXT', 'IMAGE'] }, signal);
+
+  const parts = genResult.candidates?.[0]?.content?.parts || [];
+  for(const part of parts){
+    if(part.inlineData){
+      return { name: obj.name, data: part.inlineData.data, mime: part.inlineData.mimeType || 'image/png' };
+    }
+  }
+  return { name: obj.name, data: null, mime: null, error: true };
+}
+
+// ── Render results ──
+function renderResults(results){
+  const resultGrid = document.getElementById('resultGrid');
+  const dlAllBtn = document.getElementById('dlAllBtn');
+  resultGrid.innerHTML = '';
+  lastResults = results;
+
+  const successCount = results.filter(r => r.data).length;
+  dlAllBtn.style.display = successCount >= 2 ? '' : 'none';
+
+  for(let i = 0; i < results.length; i++){
+    const r = results[i];
+    const card = document.createElement('div');
+    card.className = 'result-card';
+
+    if(r.data){
+      const ext = r.mime.includes('png') ? 'png' : 'jpeg';
+      const dataUrl = `data:${r.mime};base64,${r.data}`;
+      card.innerHTML = `
+        <img src="${dataUrl}" alt="${r.name}">
+        <div class="info">
+          <div class="obj-name">${r.name}</div>
+          <button class="dl-btn" onclick="downloadImg('${r.name.replace(/'/g,"\\'")}','${dataUrl}','${ext}')">⬇️ 下載圖片</button>
+        </div>`;
+    } else {
+      card.innerHTML = `
+        <div style="padding:2rem;color:var(--text-light)">
+          <div style="font-size:2rem;margin-bottom:.5rem">⚠️</div>
+          <div class="obj-name">${r.name}</div>
+          <p style="font-size:.85rem">此物件未能產生圖片</p>
+          <button class="retry-btn" onclick="retryOne(${i})">🔄 重新擷取</button>
+        </div>`;
+    }
+    resultGrid.appendChild(card);
+  }
+}
+
+// ── Retry single object ──
+async function retryOne(index){
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if(!apiKey){showError('請先輸入 Gemini API 金鑰');return}
+  if(!lastObjects[index]) return;
+
+  const cards = document.querySelectorAll('.result-card');
+  const card = cards[index];
+  if(card) card.innerHTML = `<div style="padding:2rem"><div class="spinner"></div><p style="font-size:.85rem;color:var(--text-light);margin-top:.5rem">重新擷取中…</p></div>`;
+
+  try {
+    const result = await generateObjectImage(apiKey, lastObjects[index]);
+    lastResults[index] = result;
+    renderResults(lastResults);
+  } catch(err){
+    showError('重試失敗：' + (err.message || '未知錯誤'));
+    if(card) renderResults(lastResults); // restore
+  }
 }
 
 // ── Main extraction flow ──
@@ -253,12 +414,17 @@ async function startExtraction(){
   const goBtn = document.getElementById('goBtn');
   const progressArea = document.getElementById('progressArea');
   const progressText = document.getElementById('progressText');
+  const progressItems = document.getElementById('progressItems');
   const resultsArea  = document.getElementById('resultsArea');
   const resultGrid   = document.getElementById('resultGrid');
+
+  abortController = new AbortController();
+  const signal = abortController.signal;
 
   goBtn.disabled = true;
   resultsArea.style.display = 'none';
   resultGrid.innerHTML = '';
+  progressItems.innerHTML = '';
   progressArea.style.display = 'block';
   document.getElementById('errorBox').style.display = 'none';
 
@@ -285,98 +451,59 @@ async function startExtraction(){
         { inlineData: { mimeType: imageMime, data: imageBase64 } },
         { text: identifyPrompt }
       ]
-    }]);
+    }], {}, signal);
 
     let objectsText = identifyResult.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    // Extract JSON from response
-    const jsonMatch = objectsText.match(/\[[\s\S]*?\]/);
-    if(!jsonMatch) throw new Error('AI 無法辨識物件，請換一張更清楚的照片再試');
-    
+    const jsonStr = extractJSON(objectsText);
+    if(!jsonStr) throw new Error('AI 無法辨識物件，請換一張更清楚的照片再試');
+
     let objects;
-    try { objects = JSON.parse(jsonMatch[0]); } catch(e){ throw new Error('AI 回覆格式異常，請重試'); }
+    try { objects = JSON.parse(jsonStr); } catch(e){ throw new Error('AI 回覆格式異常，請重試'); }
     if(!Array.isArray(objects) || objects.length === 0) throw new Error('未偵測到物件');
 
     objects = objects.slice(0, objectCount);
+    lastObjects = objects;
 
-    // ── Step B: Generate each object image ──
-    const results = [];
-    for(let i = 0; i < objects.length; i++){
-      const obj = objects[i];
-      progressText.textContent = `✂️ 正在擷取第 ${i+1}/${objects.length} 個物件：${obj.name}…`;
+    // ── Step B: Generate all object images in parallel ──
+    progressText.textContent = `✂️ 正在同時擷取 ${objects.length} 個物件…`;
 
-      const genPrompt = `請根據這張照片中的「${obj.name}」（${obj.description}），生成一張乾淨的去背圖片。
+    // Build progress chips
+    progressItems.innerHTML = objects.map((obj, i) =>
+      `<span class="progress-chip active" id="chip-${i}">${obj.name}</span>`
+    ).join('');
 
-要求：
-- 只畫出「${obj.name}」這一個物件，不要其他東西
-- 純白色背景
-- 物件要清晰、完整、置中
-- 風格要盡量還原照片中該物件的真實外觀
-- 圖片品質要高，適合做教材使用`;
+    const promises = objects.map((obj, i) =>
+      generateObjectImage(apiKey, obj, signal)
+        .then(result => {
+          document.getElementById(`chip-${i}`).className = 'progress-chip done';
+          return result;
+        })
+        .catch(err => {
+          if(err.name === 'AbortError') throw err;
+          document.getElementById(`chip-${i}`).className = 'progress-chip error';
+          return { name: obj.name, data: null, mime: null, error: true };
+        })
+    );
 
-      const genResult = await callGemini(apiKey, [{
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: imageMime, data: imageBase64 } },
-          { text: genPrompt }
-        ]
-      }], { responseModalities: ['TEXT', 'IMAGE'] });
-
-      // Extract generated image
-      const parts = genResult.candidates?.[0]?.content?.parts || [];
-      let imgData = null;
-      let imgMime = 'image/png';
-      for(const part of parts){
-        if(part.inlineData){
-          imgData = part.inlineData.data;
-          imgMime = part.inlineData.mimeType || 'image/png';
-          break;
-        }
-      }
-
-      if(imgData){
-        results.push({ name: obj.name, data: imgData, mime: imgMime });
-      } else {
-        // If no image returned, note it
-        results.push({ name: obj.name, data: null, mime: null, error: true });
-      }
-    }
+    const results = await Promise.all(promises);
 
     // ── Step C: Show results ──
     progressArea.style.display = 'none';
     resultsArea.style.display = 'block';
-
-    for(const r of results){
-      const card = document.createElement('div');
-      card.className = 'result-card';
-
-      if(r.data){
-        const ext = r.mime.includes('png') ? 'png' : 'jpeg';
-        const dataUrl = `data:${r.mime};base64,${r.data}`;
-        card.innerHTML = `
-          <img src="${dataUrl}" alt="${r.name}">
-          <div class="info">
-            <div class="obj-name">${r.name}</div>
-            <button class="dl-btn" onclick="downloadImg('${r.name}','${dataUrl}','${ext}')">⬇️ 下載圖片</button>
-          </div>`;
-      } else {
-        card.innerHTML = `
-          <div style="padding:2rem;color:var(--text-light)">
-            <div style="font-size:2rem;margin-bottom:.5rem">⚠️</div>
-            <div class="obj-name">${r.name}</div>
-            <p style="font-size:.85rem">此物件未能產生圖片，請重試</p>
-          </div>`;
-      }
-      resultGrid.appendChild(card);
-    }
-
+    renderResults(results);
     resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } catch(err){
     progressArea.style.display = 'none';
-    showError('❌ ' + (err.message || '發生未知錯誤'));
-    console.error(err);
+    if(err.name === 'AbortError'){
+      showError('已取消擷取');
+    } else {
+      showError('❌ ' + (err.message || '發生未知錯誤'));
+      console.error(err);
+    }
   } finally {
     goBtn.disabled = false;
+    abortController = null;
   }
 }
 
@@ -388,6 +515,16 @@ function downloadImg(name, dataUrl, ext){
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+// ── Download all ──
+function downloadAll(){
+  for(const r of lastResults){
+    if(!r.data) continue;
+    const ext = r.mime.includes('png') ? 'png' : 'jpeg';
+    const dataUrl = `data:${r.mime};base64,${r.data}`;
+    downloadImg(r.name, dataUrl, ext);
+  }
 }
 </script>
 </body>
