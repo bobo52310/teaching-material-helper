@@ -1,0 +1,16 @@
+{
+  "name": "教材小幫手 - AI 教學圖卡工具",
+  "short_name": "教材小幫手",
+  "description": "上傳照片，AI 自動偵測並切割物件，生成雙語教學圖卡",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f0f7f7",
+  "theme_color": "#00897b",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂️</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
