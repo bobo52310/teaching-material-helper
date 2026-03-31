@@ -3,53 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>教材小幫手 - Teaching Material Helper</title>
+<title>教材小幫手 - AI 教學圖卡工具</title>
+<meta name="description" content="上傳照片，AI 自動偵測並切割物件，生成雙語教學圖卡。100% 瀏覽器端執行，完全保護隱私。">
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
     --primary:#4db6ac;--primary-dark:#00897b;--primary-light:#b2dfdb;
-    --accent:#ff8a65;--bg:#f0f7f7;--card:#ffffff;--text:#37474f;
+    --accent:#ff8a65;--accent-dark:#ef6c00;
+    --bg:#f0f7f7;--card:#ffffff;--text:#37474f;
     --text-light:#78909c;--shadow:0 4px 20px rgba(0,0,0,.08);
-    --radius:16px;
+    --radius:16px;--radius-sm:10px;
+    --success:#43a047;--warning:#f9a825;
   }
   body{font-family:'Segoe UI','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
 
-  /* header */
-  .header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;text-align:center;padding:2rem 1rem 1.5rem;position:relative;overflow:hidden}
+  /* Header */
+  .header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;text-align:center;padding:2.5rem 1rem 2rem;position:relative;overflow:hidden}
   .header::after{content:'';position:absolute;bottom:-30px;left:-10%;width:120%;height:60px;background:var(--bg);border-radius:50% 50% 0 0}
   .header h1{font-size:1.8rem;font-weight:700;margin-bottom:.3rem}
-  .header p{font-size:.95rem;opacity:.9}
+  .header .subtitle{font-size:.95rem;opacity:.9}
+  .header .badge{display:inline-block;background:rgba(255,255,255,.2);padding:.2rem .8rem;border-radius:20px;font-size:.75rem;margin-top:.5rem;backdrop-filter:blur(4px)}
   .header .emoji{font-size:2.4rem;margin-bottom:.4rem;display:block}
 
-  /* container */
-  .container{max-width:680px;margin:0 auto;padding:0 1rem 3rem}
+  /* Container */
+  .container{max-width:720px;margin:0 auto;padding:0 1rem 3rem}
 
-  /* cards */
+  /* Feature highlights */
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin:-1rem 0 1.2rem}
+  .feature{background:var(--card);border-radius:var(--radius);padding:1.2rem .8rem;text-align:center;box-shadow:var(--shadow)}
+  .feature .feat-icon{font-size:1.6rem;margin-bottom:.4rem}
+  .feature .feat-title{font-weight:600;font-size:.85rem;color:var(--primary-dark);margin-bottom:.2rem}
+  .feature .feat-desc{font-size:.75rem;color:var(--text-light);line-height:1.4}
+
+  /* Cards */
   .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem;margin-bottom:1.2rem;transition:transform .2s}
   .card-title{display:flex;align-items:center;gap:.5rem;font-size:1.05rem;font-weight:600;margin-bottom:1rem;color:var(--primary-dark)}
   .card-title .step{background:var(--primary);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
 
-  /* upload */
+  /* Upload */
   .upload-zone{border:2px dashed var(--primary-light);border-radius:14px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:all .25s;position:relative;background:#f8fffe}
-  .upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:#e8f5f3}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:#e8f5f3;transform:scale(1.01)}
   .upload-zone input{display:none}
   .upload-zone .icon{font-size:2.5rem;margin-bottom:.5rem}
   .upload-zone p{color:var(--text-light);font-size:.9rem}
+  .upload-zone .hint{font-size:.75rem;color:var(--text-light);margin-top:.4rem;opacity:.7}
 
   .preview-wrap{position:relative;margin-top:1rem;text-align:center;display:none}
   .preview-wrap img{max-width:100%;max-height:300px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
-  .preview-wrap .remove-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;cursor:pointer;line-height:32px}
+  .preview-wrap .remove-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;cursor:pointer;line-height:32px;transition:background .2s}
+  .preview-wrap .remove-btn:hover{background:rgba(0,0,0,.75)}
 
-  /* go button */
-  .go-btn{width:100%;padding:.9rem;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ef6c00);color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .25s;margin-top:.5rem}
+  /* Go button */
+  .go-btn{width:100%;padding:.9rem;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .25s;margin-top:.5rem}
   .go-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,138,101,.4)}
   .go-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
 
-  /* model status */
+  /* Model status */
   .model-status{font-size:.82rem;color:var(--text-light);margin-top:.6rem;text-align:center}
   .model-status.ready{color:var(--primary-dark)}
 
-  /* progress / spinner */
+  /* Progress */
   .progress-area{text-align:center;padding:2rem 0;display:none}
   .spinner{width:48px;height:48px;border:4px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -57,31 +70,99 @@
   .progress-bar-wrap{width:80%;max-width:300px;height:8px;background:var(--primary-light);border-radius:4px;margin:.8rem auto 0;overflow:hidden;display:none}
   .progress-bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:4px;width:0%;transition:width .3s ease}
 
-  /* results */
+  /* Results */
   .results-area{display:none}
-  .result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
-  .result-card{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;text-align:center}
-  .result-card img{width:100%;aspect-ratio:1;object-fit:contain;background:#fafafa;padding:.5rem}
-  .result-card .info{padding:.8rem 1rem}
-  .result-card .obj-name{font-weight:600;margin-bottom:.5rem;color:var(--primary-dark);font-size:.95rem}
-  .dl-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:background .2s}
-  .dl-btn:hover{background:var(--primary-dark)}
 
-  /* download all */
-  .dl-all-wrap{text-align:center;margin-top:1rem}
+  /* Results toolbar */
+  .results-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid #e0e0e0}
+  .results-count{font-size:.9rem;color:var(--text-light)}
+  .toolbar-actions{display:flex;gap:.5rem}
+  .toolbar-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .8rem;border:1px solid #ccc;border-radius:var(--radius-sm);background:#fff;color:var(--text);font-size:.8rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .toolbar-btn:hover{border-color:var(--primary);color:var(--primary-dark);background:#f0faf9}
+  .toolbar-btn.copied{border-color:var(--success);color:var(--success)}
+
+  /* Result grid */
+  .result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+
+  /* Vocabulary card */
+  .vocab-card{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;transition:transform .2s,box-shadow .2s}
+  .vocab-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.12)}
+  .vocab-card .card-img{width:100%;aspect-ratio:1;object-fit:contain;background:#fafafa;padding:.5rem;display:block}
+  .vocab-card .card-body{padding:.8rem 1rem 1rem}
+
+  /* Bilingual labels */
+  .label-zh{font-weight:700;font-size:1.1rem;color:var(--text);line-height:1.3}
+  .label-en{font-size:.8rem;color:var(--text-light);margin-top:.1rem}
+  .label-edit{display:none;width:100%;border:1px solid var(--primary-light);border-radius:6px;padding:.3rem .5rem;font-size:.95rem;font-family:inherit;outline:none;color:var(--text);margin-bottom:.3rem}
+  .label-edit:focus{border-color:var(--primary)}
+  .label-row{cursor:text;position:relative;min-height:2.2rem}
+  .label-row .edit-hint{display:none;font-size:.65rem;color:var(--text-light);position:absolute;right:0;top:0}
+  .label-row:hover .edit-hint{display:block}
+
+  /* Confidence bar */
+  .confidence{display:flex;align-items:center;gap:.4rem;margin-top:.5rem}
+  .conf-bar{flex:1;height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden}
+  .conf-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+  .conf-bar-fill.high{background:var(--success)}
+  .conf-bar-fill.medium{background:var(--warning)}
+  .conf-bar-fill.low{background:#e57373}
+  .conf-text{font-size:.7rem;color:var(--text-light);min-width:2.5rem;text-align:right}
+
+  /* Card actions */
+  .card-actions{display:flex;gap:.4rem;margin-top:.6rem}
+  .card-action-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:.3rem;padding:.45rem .5rem;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s}
+  .dl-btn{background:var(--primary);color:#fff}
+  .dl-btn:hover{background:var(--primary-dark)}
+  .tts-btn{background:#e8f5e9;color:#2e7d32}
+  .tts-btn:hover{background:#c8e6c9}
+  .tts-btn.speaking{background:#2e7d32;color:#fff}
+
+  /* Download all */
+  .dl-all-wrap{text-align:center;margin-top:1.2rem}
   .dl-all-btn{padding:.7rem 2rem;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary-dark);font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s}
   .dl-all-btn:hover{background:var(--primary);color:#fff}
 
-  /* error */
+  /* Error */
   .error-box{background:#ffebee;color:#c62828;border-radius:12px;padding:1rem 1.2rem;margin-top:1rem;font-size:.9rem;display:none;line-height:1.5}
 
-  /* footer */
-  .footer{text-align:center;padding:1.5rem;color:var(--text-light);font-size:.8rem}
+  /* Toast */
+  .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--text);color:#fff;padding:.7rem 1.5rem;border-radius:12px;font-size:.85rem;opacity:0;transition:all .3s;z-index:1000;pointer-events:none}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
-  /* responsive */
+  /* Footer */
+  .footer{text-align:center;padding:1.5rem;color:var(--text-light);font-size:.8rem}
+  .footer a{color:var(--primary-dark);text-decoration:none}
+  .footer a:hover{text-decoration:underline}
+
+  /* Print styles */
+  @media print{
+    body{background:#fff}
+    .header,.features,.card:has(.upload-zone),.card:has(.go-btn),.progress-area,.footer,.toolbar-actions,.card-actions,.dl-all-wrap,.remove-btn{display:none!important}
+    .results-area{display:block!important}
+    .results-area .card{box-shadow:none;padding:0}
+    .results-toolbar{border:none;padding:0}
+    .results-count{font-size:1.1rem;font-weight:600;color:var(--text)}
+    .result-grid{grid-template-columns:repeat(3,1fr);gap:.5rem}
+    .vocab-card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}
+    .vocab-card:hover{transform:none}
+    .vocab-card .card-img{max-height:150px}
+    .confidence{display:none}
+    .edit-hint{display:none!important}
+    @page{margin:1.5cm}
+  }
+
+  /* Responsive */
+  @media(max-width:600px){
+    .features{grid-template-columns:1fr;gap:.6rem}
+    .feature{padding:.8rem;display:flex;align-items:center;gap:.8rem;text-align:left}
+    .feature .feat-icon{font-size:1.4rem;margin-bottom:0}
+    .result-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    .toolbar-actions{width:100%}
+    .toolbar-btn{flex:1;justify-content:center}
+  }
   @media(max-width:480px){
     .header h1{font-size:1.4rem}
-    .result-grid{grid-template-columns:1fr}
+    .result-grid{grid-template-columns:1fr 1fr}
   }
 </style>
 </head>
@@ -90,10 +171,36 @@
 <div class="header">
   <span class="emoji">✂️📸</span>
   <h1>教材小幫手</h1>
-  <p>上傳照片，AI 幫你把物件一個一個切出來！</p>
+  <p class="subtitle">上傳照片，AI 幫你把物件一個一個切出來，生成雙語教學圖卡！</p>
+  <span class="badge">v2.0 — 100% 瀏覽器端執行 · 免費 · 保護隱私</span>
 </div>
 
 <div class="container">
+
+  <!-- Feature Highlights -->
+  <div class="features">
+    <div class="feature">
+      <div class="feat-icon">🔍</div>
+      <div>
+        <div class="feat-title">AI 自動偵測</div>
+        <div class="feat-desc">辨識照片中的 80+ 種物件</div>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feat-icon">🌐</div>
+      <div>
+        <div class="feat-title">雙語圖卡</div>
+        <div class="feat-desc">中英對照，附語音發音</div>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feat-icon">🔒</div>
+      <div>
+        <div class="feat-title">完全離線</div>
+        <div class="feat-desc">照片不會上傳，隱私安全</div>
+      </div>
+    </div>
+  </div>
 
   <!-- Step 1: Upload -->
   <div class="card">
@@ -102,10 +209,11 @@
       <input type="file" id="fileInput" accept="image/*">
       <div class="icon">📷</div>
       <p>點擊或拖曳照片到這裡</p>
+      <div class="hint">支援 JPG、PNG、WebP 等常見圖片格式</div>
     </div>
     <div class="preview-wrap" id="previewWrap">
       <img id="previewImg" alt="preview">
-      <button class="remove-btn" id="removeBtn" title="移除">✕</button>
+      <button class="remove-btn" id="removeBtn" title="移除照片">✕</button>
     </div>
   </div>
 
@@ -113,7 +221,7 @@
   <div class="card">
     <div class="card-title"><span class="step">2</span> 開始擷取</div>
     <p style="font-size:.88rem;color:var(--text-light);margin-bottom:.8rem">
-      AI 會自動偵測照片中的物件，並從原圖裁切出來。<br>
+      AI 會自動偵測照片中的物件，從原圖裁切並生成雙語教學圖卡。<br>
       <span style="font-size:.8rem">首次使用需下載約 40 MB 的 AI 模型（之後會快取）</span>
     </p>
     <button class="go-btn" id="goBtn">✨ AI 自動偵測並切割物件</button>
@@ -134,16 +242,31 @@
   <div class="results-area" id="resultsArea">
     <div class="card">
       <div class="card-title">🎉 擷取完成！</div>
+
+      <!-- Toolbar -->
+      <div class="results-toolbar">
+        <span class="results-count" id="resultsCount"></span>
+        <div class="toolbar-actions">
+          <button class="toolbar-btn" id="copyListBtn" title="複製詞彙清單">📋 複製詞彙</button>
+          <button class="toolbar-btn" id="printBtn" title="列印教學卡片">🖨️ 列印</button>
+        </div>
+      </div>
+
       <div class="result-grid" id="resultGrid"></div>
       <div class="dl-all-wrap" id="dlAllWrap" style="display:none">
-        <button class="dl-all-btn" id="dlAllBtn">📦 全部下載</button>
+        <button class="dl-all-btn" id="dlAllBtn">📦 全部下載圖片</button>
       </div>
     </div>
   </div>
 
 </div>
 
-<div class="footer">教材小幫手 — Powered by Transformers.js — 100% 在你的瀏覽器中執行 🔒</div>
+<div class="footer">
+  教材小幫手 v2.0 — Powered by <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a> — 100% 在你的瀏覽器中執行 🔒
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
 
 <script type="module">
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
@@ -154,51 +277,122 @@ env.allowLocalModels = false;
 let detector = null;
 let modelLoading = false;
 let originalImg = null;
+let currentResults = [];
 
-// ── COCO label → Chinese name ──
-const LABEL_ZH = {
-  'person':'人物','bicycle':'腳踏車','car':'汽車','motorcycle':'機車',
-  'airplane':'飛機','bus':'公車','train':'火車','truck':'卡車',
-  'boat':'船','traffic light':'紅綠燈','fire hydrant':'消防栓',
-  'stop sign':'停止標誌','parking meter':'停車計費器','bench':'長椅',
-  'bird':'鳥','cat':'貓','dog':'狗','horse':'馬','sheep':'羊','cow':'牛',
-  'elephant':'大象','bear':'熊','zebra':'斑馬','giraffe':'長頸鹿',
-  'backpack':'背包','umbrella':'雨傘','handbag':'手提包','tie':'領帶',
-  'suitcase':'行李箱','frisbee':'飛盤','skis':'滑雪板','snowboard':'滑雪板',
-  'sports ball':'運動球','kite':'風箏','baseball bat':'棒球棒',
-  'baseball glove':'棒球手套','skateboard':'滑板','surfboard':'衝浪板',
-  'tennis racket':'網球拍','bottle':'瓶子','wine glass':'酒杯',
-  'cup':'杯子','fork':'叉子','knife':'刀','spoon':'湯匙','bowl':'碗',
-  'banana':'香蕉','apple':'蘋果','sandwich':'三明治','orange':'柳橙',
-  'broccoli':'花椰菜','carrot':'胡蘿蔔','hot dog':'熱狗','pizza':'披薩',
-  'donut':'甜甜圈','cake':'蛋糕','chair':'椅子','couch':'沙發',
-  'potted plant':'盆栽','bed':'床','dining table':'餐桌','toilet':'馬桶',
-  'tv':'電視','laptop':'筆電','mouse':'滑鼠','remote':'遙控器',
-  'keyboard':'鍵盤','cell phone':'手機','microwave':'微波爐','oven':'烤箱',
-  'toaster':'烤麵包機','sink':'水槽','refrigerator':'冰箱','book':'書',
-  'clock':'時鐘','vase':'花瓶','scissors':'剪刀','teddy bear':'泰迪熊',
-  'hair drier':'吹風機','toothbrush':'牙刷'
+// ── COCO label → Chinese + English ──
+const LABELS = {
+  'person':        { zh: '人物', en: 'Person' },
+  'bicycle':       { zh: '腳踏車', en: 'Bicycle' },
+  'car':           { zh: '汽車', en: 'Car' },
+  'motorcycle':    { zh: '機車', en: 'Motorcycle' },
+  'airplane':      { zh: '飛機', en: 'Airplane' },
+  'bus':           { zh: '公車', en: 'Bus' },
+  'train':         { zh: '火車', en: 'Train' },
+  'truck':         { zh: '卡車', en: 'Truck' },
+  'boat':          { zh: '船', en: 'Boat' },
+  'traffic light': { zh: '紅綠燈', en: 'Traffic Light' },
+  'fire hydrant':  { zh: '消防栓', en: 'Fire Hydrant' },
+  'stop sign':     { zh: '停止標誌', en: 'Stop Sign' },
+  'parking meter': { zh: '停車計費器', en: 'Parking Meter' },
+  'bench':         { zh: '長椅', en: 'Bench' },
+  'bird':          { zh: '鳥', en: 'Bird' },
+  'cat':           { zh: '貓', en: 'Cat' },
+  'dog':           { zh: '狗', en: 'Dog' },
+  'horse':         { zh: '馬', en: 'Horse' },
+  'sheep':         { zh: '羊', en: 'Sheep' },
+  'cow':           { zh: '牛', en: 'Cow' },
+  'elephant':      { zh: '大象', en: 'Elephant' },
+  'bear':          { zh: '熊', en: 'Bear' },
+  'zebra':         { zh: '斑馬', en: 'Zebra' },
+  'giraffe':       { zh: '長頸鹿', en: 'Giraffe' },
+  'backpack':      { zh: '背包', en: 'Backpack' },
+  'umbrella':      { zh: '雨傘', en: 'Umbrella' },
+  'handbag':       { zh: '手提包', en: 'Handbag' },
+  'tie':           { zh: '領帶', en: 'Tie' },
+  'suitcase':      { zh: '行李箱', en: 'Suitcase' },
+  'frisbee':       { zh: '飛盤', en: 'Frisbee' },
+  'skis':          { zh: '滑雪板', en: 'Skis' },
+  'snowboard':     { zh: '單板滑雪', en: 'Snowboard' },
+  'sports ball':   { zh: '運動球', en: 'Sports Ball' },
+  'kite':          { zh: '風箏', en: 'Kite' },
+  'baseball bat':  { zh: '棒球棒', en: 'Baseball Bat' },
+  'baseball glove':{ zh: '棒球手套', en: 'Baseball Glove' },
+  'skateboard':    { zh: '滑板', en: 'Skateboard' },
+  'surfboard':     { zh: '衝浪板', en: 'Surfboard' },
+  'tennis racket': { zh: '網球拍', en: 'Tennis Racket' },
+  'bottle':        { zh: '瓶子', en: 'Bottle' },
+  'wine glass':    { zh: '酒杯', en: 'Wine Glass' },
+  'cup':           { zh: '杯子', en: 'Cup' },
+  'fork':          { zh: '叉子', en: 'Fork' },
+  'knife':         { zh: '刀', en: 'Knife' },
+  'spoon':         { zh: '湯匙', en: 'Spoon' },
+  'bowl':          { zh: '碗', en: 'Bowl' },
+  'banana':        { zh: '香蕉', en: 'Banana' },
+  'apple':         { zh: '蘋果', en: 'Apple' },
+  'sandwich':      { zh: '三明治', en: 'Sandwich' },
+  'orange':        { zh: '柳橙', en: 'Orange' },
+  'broccoli':      { zh: '花椰菜', en: 'Broccoli' },
+  'carrot':        { zh: '胡蘿蔔', en: 'Carrot' },
+  'hot dog':       { zh: '熱狗', en: 'Hot Dog' },
+  'pizza':         { zh: '披薩', en: 'Pizza' },
+  'donut':         { zh: '甜甜圈', en: 'Donut' },
+  'cake':          { zh: '蛋糕', en: 'Cake' },
+  'chair':         { zh: '椅子', en: 'Chair' },
+  'couch':         { zh: '沙發', en: 'Couch' },
+  'potted plant':  { zh: '盆栽', en: 'Potted Plant' },
+  'bed':           { zh: '床', en: 'Bed' },
+  'dining table':  { zh: '餐桌', en: 'Dining Table' },
+  'toilet':        { zh: '馬桶', en: 'Toilet' },
+  'tv':            { zh: '電視', en: 'TV' },
+  'laptop':        { zh: '筆電', en: 'Laptop' },
+  'mouse':         { zh: '滑鼠', en: 'Mouse' },
+  'remote':        { zh: '遙控器', en: 'Remote' },
+  'keyboard':      { zh: '鍵盤', en: 'Keyboard' },
+  'cell phone':    { zh: '手機', en: 'Cell Phone' },
+  'microwave':     { zh: '微波爐', en: 'Microwave' },
+  'oven':          { zh: '烤箱', en: 'Oven' },
+  'toaster':       { zh: '烤麵包機', en: 'Toaster' },
+  'sink':          { zh: '水槽', en: 'Sink' },
+  'refrigerator':  { zh: '冰箱', en: 'Refrigerator' },
+  'book':          { zh: '書', en: 'Book' },
+  'clock':         { zh: '時鐘', en: 'Clock' },
+  'vase':          { zh: '花瓶', en: 'Vase' },
+  'scissors':      { zh: '剪刀', en: 'Scissors' },
+  'teddy bear':    { zh: '泰迪熊', en: 'Teddy Bear' },
+  'hair drier':    { zh: '吹風機', en: 'Hair Drier' },
+  'toothbrush':    { zh: '牙刷', en: 'Toothbrush' },
 };
 
-function translateLabel(label) {
-  return LABEL_ZH[label] || label;
+function getLabel(cocoLabel) {
+  return LABELS[cocoLabel] || { zh: cocoLabel, en: cocoLabel };
 }
 
 // ── DOM refs ──
 const uploadZone = document.getElementById('uploadZone');
-const fileInput = document.getElementById('fileInput');
+const fileInput  = document.getElementById('fileInput');
 const previewWrap = document.getElementById('previewWrap');
-const previewImg = document.getElementById('previewImg');
-const goBtn = document.getElementById('goBtn');
-const progressArea = document.getElementById('progressArea');
-const progressText = document.getElementById('progressText');
+const previewImg  = document.getElementById('previewImg');
+const goBtn       = document.getElementById('goBtn');
+const progressArea   = document.getElementById('progressArea');
+const progressText   = document.getElementById('progressText');
 const progressBarWrap = document.getElementById('progressBarWrap');
-const progressBar = document.getElementById('progressBar');
-const resultsArea = document.getElementById('resultsArea');
-const resultGrid = document.getElementById('resultGrid');
-const errorBox = document.getElementById('errorBox');
-const modelStatus = document.getElementById('modelStatus');
-const dlAllWrap = document.getElementById('dlAllWrap');
+const progressBar     = document.getElementById('progressBar');
+const resultsArea  = document.getElementById('resultsArea');
+const resultGrid   = document.getElementById('resultGrid');
+const errorBox     = document.getElementById('errorBox');
+const modelStatus  = document.getElementById('modelStatus');
+const dlAllWrap    = document.getElementById('dlAllWrap');
+const resultsCount = document.getElementById('resultsCount');
+const toastEl      = document.getElementById('toast');
+
+// ── Toast notification ──
+let toastTimer = null;
+function showToast(msg, duration = 2500) {
+  clearTimeout(toastTimer);
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+}
 
 // ── Upload handling ──
 uploadZone.addEventListener('click', () => fileInput.click());
@@ -264,12 +458,11 @@ async function loadModel(onProgress) {
 }
 
 // ── Crop object from image using bounding box ──
-function cropFromImage(img, box, label) {
+function cropFromImage(img, box, cocoLabel) {
   const w = img.naturalWidth, h = img.naturalHeight;
-  // box: { xmin, ymin, xmax, ymax } in pixels from model
-  const pad = 8; // small padding
-  const x = Math.max(0, Math.round(box.xmin) - pad);
-  const y = Math.max(0, Math.round(box.ymin) - pad);
+  const pad = 8;
+  const x  = Math.max(0, Math.round(box.xmin) - pad);
+  const y  = Math.max(0, Math.round(box.ymin) - pad);
   const x2 = Math.min(w, Math.round(box.xmax) + pad);
   const y2 = Math.min(h, Math.round(box.ymax) + pad);
   const cw = x2 - x, ch = y2 - y;
@@ -278,8 +471,26 @@ function cropFromImage(img, box, label) {
   const canvas = document.createElement('canvas');
   canvas.width = cw; canvas.height = ch;
   canvas.getContext('2d').drawImage(img, x, y, cw, ch, 0, 0, cw, ch);
-  return { name: translateLabel(label), dataUrl: canvas.toDataURL('image/png') };
+
+  const label = getLabel(cocoLabel);
+  return { zh: label.zh, en: label.en, dataUrl: canvas.toDataURL('image/png') };
 }
+
+// ── Copy vocabulary list ──
+document.getElementById('copyListBtn').addEventListener('click', () => {
+  if (currentResults.length === 0) return;
+  const lines = currentResults.map((r, i) => `${i + 1}. ${r.zh} — ${r.en}`);
+  const text = `教材小幫手 — 詞彙清單\n${'─'.repeat(20)}\n${lines.join('\n')}`;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ 詞彙清單已複製到剪貼簿！');
+    const btn = document.getElementById('copyListBtn');
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 2000);
+  }).catch(() => showToast('❌ 複製失敗，請手動選取'));
+});
+
+// ── Print ──
+document.getElementById('printBtn').addEventListener('click', () => window.print());
 
 // ── Main extraction flow ──
 goBtn.addEventListener('click', startExtraction);
@@ -293,6 +504,7 @@ async function startExtraction() {
   dlAllWrap.style.display = 'none';
   progressArea.style.display = 'block';
   errorBox.style.display = 'none';
+  currentResults = [];
 
   try {
     // Phase 1: Load model
@@ -317,8 +529,8 @@ async function startExtraction() {
       throw new Error('AI 未偵測到任何物件，請換一張更清楚的照片再試');
     }
 
-    // Phase 3: Crop each detected object from original image
-    progressText.textContent = '✂️ 正在裁切物件…';
+    // Phase 3: Crop each detected object
+    progressText.textContent = '✂️ 正在裁切物件並生成圖卡…';
     const results = [];
     for (const det of detections) {
       const result = cropFromImage(originalImg, det.box, det.label);
@@ -332,24 +544,42 @@ async function startExtraction() {
       throw new Error('裁切失敗，請換一張照片再試');
     }
 
+    currentResults = results;
+
     // Phase 4: Display results
     progressArea.style.display = 'none';
     resultsArea.style.display = 'block';
+    resultsCount.textContent = `共偵測到 ${results.length} 個物件`;
 
-    for (const r of results) {
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      const pct = Math.round(r.score * 100);
+      const confClass = pct >= 90 ? 'high' : pct >= 75 ? 'medium' : 'low';
+
       const card = document.createElement('div');
-      card.className = 'result-card';
-      const pct = r.score ? ` (${Math.round(r.score * 100)}%)` : '';
+      card.className = 'vocab-card';
       card.innerHTML = `
-        <img src="${r.dataUrl}" alt="${r.name}">
-        <div class="info">
-          <div class="obj-name">${r.name}${pct}</div>
-          <button class="dl-btn" data-name="${r.name}">⬇️ 下載圖片</button>
+        <img class="card-img" src="${r.dataUrl}" alt="${r.zh}">
+        <div class="card-body">
+          <div class="label-row" data-idx="${i}">
+            <div class="label-zh">${r.zh}</div>
+            <div class="label-en">${r.en}</div>
+            <input class="label-edit label-edit-zh" type="text" value="${r.zh}" placeholder="中文名稱">
+            <input class="label-edit label-edit-en" type="text" value="${r.en}" placeholder="English name">
+            <span class="edit-hint">✏️ 編輯</span>
+          </div>
+          <div class="confidence">
+            <div class="conf-bar"><div class="conf-bar-fill ${confClass}" style="width:${pct}%"></div></div>
+            <span class="conf-text">${pct}%</span>
+          </div>
+          <div class="card-actions">
+            <button class="card-action-btn tts-btn" data-en="${r.en}" data-zh="${r.zh}" title="朗讀發音">🔊</button>
+            <button class="card-action-btn dl-btn" data-name="${r.zh}" title="下載圖片">⬇️ 下載</button>
+          </div>
         </div>`;
       resultGrid.appendChild(card);
     }
 
-    // Download all button
     if (results.length >= 2) {
       dlAllWrap.style.display = 'block';
     }
@@ -365,25 +595,110 @@ async function startExtraction() {
   }
 }
 
-// ── Download handlers (event delegation) ──
+// ── Event delegation for result cards ──
 resultGrid.addEventListener('click', (e) => {
-  const btn = e.target.closest('.dl-btn');
-  if (!btn) return;
-  const card = btn.closest('.result-card');
-  const img = card.querySelector('img');
-  const a = document.createElement('a');
-  a.href = img.src;
-  a.download = `${btn.dataset.name}.png`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Download button
+  const dlBtn = e.target.closest('.dl-btn');
+  if (dlBtn) {
+    const card = dlBtn.closest('.vocab-card');
+    const img = card.querySelector('.card-img');
+    const a = document.createElement('a');
+    a.href = img.src;
+    a.download = `${dlBtn.dataset.name}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+
+  // TTS button
+  const ttsBtn = e.target.closest('.tts-btn');
+  if (ttsBtn) {
+    ttsBtn.classList.add('speaking');
+    window.speechSynthesis.cancel();
+    const uEn = new SpeechSynthesisUtterance(ttsBtn.dataset.en);
+    uEn.lang = 'en-US';
+    uEn.rate = 0.8;
+    const uZh = new SpeechSynthesisUtterance(ttsBtn.dataset.zh);
+    uZh.lang = 'zh-TW';
+    uZh.rate = 0.9;
+    uZh.onend = () => ttsBtn.classList.remove('speaking');
+    uEn.onend = () => window.speechSynthesis.speak(uZh);
+    window.speechSynthesis.speak(uEn);
+    setTimeout(() => ttsBtn.classList.remove('speaking'), 5000);
+    return;
+  }
+
+  // Editable label — click to enter edit mode
+  const labelRow = e.target.closest('.label-row');
+  if (labelRow && !e.target.classList.contains('label-edit') && labelRow.dataset.editing !== 'true') {
+    const idx = parseInt(labelRow.dataset.idx);
+    const zhDisplay = labelRow.querySelector('.label-zh');
+    const enDisplay = labelRow.querySelector('.label-en');
+    const zhInput   = labelRow.querySelector('.label-edit-zh');
+    const enInput   = labelRow.querySelector('.label-edit-en');
+
+    labelRow.dataset.editing = 'true';
+    zhDisplay.style.display = 'none';
+    enDisplay.style.display = 'none';
+    zhInput.style.display = 'block';
+    enInput.style.display = 'block';
+    zhInput.focus();
+
+    const ac = new AbortController();
+    const { signal } = ac;
+
+    function finishEditing() {
+      if (labelRow.dataset.editing !== 'true') return;
+      labelRow.dataset.editing = 'false';
+      ac.abort();
+
+      const newZh = zhInput.value.trim() || currentResults[idx].zh;
+      const newEn = enInput.value.trim() || currentResults[idx].en;
+      currentResults[idx].zh = newZh;
+      currentResults[idx].en = newEn;
+      zhDisplay.textContent = newZh;
+      enDisplay.textContent = newEn;
+      zhDisplay.style.display = '';
+      enDisplay.style.display = '';
+      zhInput.style.display = 'none';
+      enInput.style.display = 'none';
+
+      // Sync TTS & download buttons
+      const body = labelRow.closest('.card-body');
+      const tts = body.querySelector('.tts-btn');
+      if (tts) { tts.dataset.zh = newZh; tts.dataset.en = newEn; }
+      const dl = body.querySelector('.dl-btn');
+      if (dl) dl.dataset.name = newZh;
+    }
+
+    function onBlur() {
+      setTimeout(() => {
+        if (!labelRow.contains(document.activeElement) ||
+            !document.activeElement.classList.contains('label-edit')) {
+          finishEditing();
+        }
+      }, 150);
+    }
+
+    zhInput.addEventListener('blur', onBlur, { signal });
+    enInput.addEventListener('blur', onBlur, { signal });
+    zhInput.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') enInput.focus();
+      if (ev.key === 'Escape') finishEditing();
+    }, { signal });
+    enInput.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === 'Escape') finishEditing();
+    }, { signal });
+  }
 });
 
+// ── Download all ──
 document.getElementById('dlAllBtn').addEventListener('click', () => {
-  const cards = resultGrid.querySelectorAll('.result-card');
+  const cards = resultGrid.querySelectorAll('.vocab-card');
   cards.forEach((card, i) => {
-    const img = card.querySelector('img');
-    const name = card.querySelector('.obj-name').textContent;
+    const img = card.querySelector('.card-img');
+    const name = currentResults[i]?.zh || `object-${i + 1}`;
     const a = document.createElement('a');
     a.href = img.src;
     a.download = `${name}.png`;
