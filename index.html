@@ -55,10 +55,15 @@
   .upload-zone p{color:var(--text-light);font-size:.9rem}
   .upload-zone .hint{font-size:.75rem;color:var(--text-light);margin-top:.4rem;opacity:.7}
 
-  .preview-wrap{position:relative;margin-top:1rem;text-align:center;display:none}
-  .preview-wrap img{max-width:100%;max-height:300px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
-  .preview-wrap .remove-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;cursor:pointer;line-height:32px;transition:background .2s}
-  .preview-wrap .remove-btn:hover{background:rgba(0,0,0,.75)}
+  .preview-wrap{margin-top:1rem;display:none}
+  .thumb-strip{display:flex;gap:.6rem;overflow-x:auto;padding:.5rem 0}
+  .thumb-item{position:relative;flex-shrink:0}
+  .thumb-item img{width:100px;height:100px;object-fit:cover;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1);display:block}
+  .thumb-item .thumb-remove{position:absolute;top:-6px;right:-6px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:.7rem;cursor:pointer;line-height:22px;text-align:center}
+  .thumb-item .thumb-remove:hover{background:#c62828}
+  .thumb-count{font-size:.82rem;color:var(--text-light);text-align:center;margin-top:.4rem}
+  .add-more-btn{display:inline-flex;align-items:center;justify-content:center;width:100px;height:100px;border:2px dashed var(--primary-light);border-radius:10px;background:transparent;cursor:pointer;font-size:1.5rem;color:var(--primary-light);flex-shrink:0;transition:all .2s}
+  .add-more-btn:hover{border-color:var(--primary);color:var(--primary);background:#f0faf9}
 
   /* Go button */
   .go-btn{width:100%;padding:.9rem;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .25s;margin-top:.5rem}
@@ -300,9 +305,9 @@
   <div class="card">
     <div class="card-title"><span class="step">1</span> 上傳照片</div>
     <div class="upload-zone" id="uploadZone">
-      <input type="file" id="fileInput" accept="image/*">
+      <input type="file" id="fileInput" accept="image/*" multiple>
       <div class="icon">📷</div>
-      <p>點擊或拖曳照片到這裡</p>
+      <p>點擊或拖曳照片到這裡（可多選）</p>
       <div class="hint">支援 JPG、PNG、WebP 等常見圖片格式</div>
     </div>
     <div class="upload-alt" id="uploadAlt">
@@ -310,8 +315,8 @@
       <button class="camera-btn" id="cameraBtn">📸 用相機拍照</button>
     </div>
     <div class="preview-wrap" id="previewWrap">
-      <img id="previewImg" alt="preview">
-      <button class="remove-btn" id="removeBtn" title="移除照片">✕</button>
+      <div class="thumb-strip" id="thumbStrip"></div>
+      <div class="thumb-count" id="thumbCount"></div>
     </div>
   </div>
 
@@ -427,7 +432,6 @@ env.allowLocalModels = false;
 // ── State ──
 let detector = null;
 let modelLoading = false;
-let originalImg = null;
 let currentResults = [];
 
 // ── COCO label → Chinese + English ──
@@ -552,43 +556,72 @@ thresholdSlider.addEventListener('input', () => {
   thresholdValue.textContent = thresholdSlider.value;
 });
 
-// ── Upload handling ──
+// ── Upload handling (multi-image) ──
+const thumbStrip = document.getElementById('thumbStrip');
+const thumbCount = document.getElementById('thumbCount');
+let originalImgs = [];
+
 uploadZone.addEventListener('click', () => fileInput.click());
 ['dragenter', 'dragover'].forEach(e => uploadZone.addEventListener(e, ev => { ev.preventDefault(); uploadZone.classList.add('dragover'); }));
 ['dragleave', 'drop'].forEach(e => uploadZone.addEventListener(e, ev => { ev.preventDefault(); uploadZone.classList.remove('dragover'); }));
-uploadZone.addEventListener('drop', ev => { if (ev.dataTransfer.files.length) handleFile(ev.dataTransfer.files[0]); });
-fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
-document.getElementById('removeBtn').addEventListener('click', removeImage);
+uploadZone.addEventListener('drop', ev => { if (ev.dataTransfer.files.length) handleFiles(ev.dataTransfer.files); });
+fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFiles(fileInput.files); });
 
 // ── Camera capture ──
 const cameraInput = document.getElementById('cameraInput');
 document.getElementById('cameraBtn').addEventListener('click', () => cameraInput.click());
-cameraInput.addEventListener('change', () => { if (cameraInput.files.length) handleFile(cameraInput.files[0]); });
+cameraInput.addEventListener('change', () => { if (cameraInput.files.length) handleFiles(cameraInput.files); });
 
-function handleFile(file) {
-  if (!file.type.startsWith('image/')) { showError('請上傳圖片檔案'); return; }
-  const reader = new FileReader();
-  reader.onload = e => {
-    const dataUrl = e.target.result;
-    previewImg.src = dataUrl;
-    previewWrap.style.display = 'block';
-    uploadZone.style.display = 'none';
-    document.getElementById('uploadAlt').style.display = 'none';
-    const img = new Image();
-    img.onload = () => { originalImg = img; };
-    img.src = dataUrl;
-  };
-  reader.readAsDataURL(file);
+function handleFiles(files) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        originalImgs.push(img);
+        renderThumbs();
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
-function removeImage() {
-  originalImg = null;
-  previewWrap.style.display = 'none';
-  uploadZone.style.display = '';
-  document.getElementById('uploadAlt').style.display = '';
-  fileInput.value = '';
-  cameraInput.value = '';
+function renderThumbs() {
+  thumbStrip.innerHTML = '';
+  originalImgs.forEach((img, i) => {
+    const item = document.createElement('div');
+    item.className = 'thumb-item';
+    item.innerHTML = `<img src="${img.src}" alt="photo ${i+1}"><button class="thumb-remove" data-idx="${i}">✕</button>`;
+    thumbStrip.appendChild(item);
+  });
+  // Add "+" button to add more
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-more-btn';
+  addBtn.textContent = '+';
+  addBtn.title = '新增更多照片';
+  addBtn.addEventListener('click', () => fileInput.click());
+  thumbStrip.appendChild(addBtn);
+
+  thumbCount.textContent = `已選擇 ${originalImgs.length} 張照片`;
+  previewWrap.style.display = originalImgs.length > 0 ? 'block' : 'none';
+  uploadZone.style.display = originalImgs.length > 0 ? 'none' : '';
+  document.getElementById('uploadAlt').style.display = originalImgs.length > 0 ? 'none' : '';
 }
+
+// Remove individual thumb
+thumbStrip.addEventListener('click', (e) => {
+  const btn = e.target.closest('.thumb-remove');
+  if (!btn) return;
+  originalImgs.splice(parseInt(btn.dataset.idx), 1);
+  renderThumbs();
+  if (originalImgs.length === 0) {
+    fileInput.value = '';
+    cameraInput.value = '';
+  }
+});
 
 // ── Error display ──
 function showError(msg) {
@@ -650,15 +683,19 @@ let lastDetections = [];
 
 const BOX_COLORS = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9'];
 
-function drawDetectionOverlay(detections) {
+let overlayImgRef = null;
+function drawDetectionOverlay(detections, img) {
   lastDetections = detections;
-  const w = originalImg.naturalWidth, h = originalImg.naturalHeight;
+  if (img) overlayImgRef = img;
+  const srcImg = overlayImgRef || (originalImgs.length > 0 ? originalImgs[0] : null);
+  if (!srcImg) return;
+  const w = srcImg.naturalWidth, h = srcImg.naturalHeight;
   const maxW = 680;
   const scale = w > maxW ? maxW / w : 1;
   detectionCanvas.width = w * scale;
   detectionCanvas.height = h * scale;
   const ctx = detectionCanvas.getContext('2d');
-  ctx.drawImage(originalImg, 0, 0, detectionCanvas.width, detectionCanvas.height);
+  ctx.drawImage(srcImg, 0, 0, detectionCanvas.width, detectionCanvas.height);
 
   if (showBoxesCheckbox.checked) {
     detections.forEach((det, i) => {
@@ -710,7 +747,7 @@ document.getElementById('printBtn').addEventListener('click', () => window.print
 goBtn.addEventListener('click', startExtraction);
 
 async function startExtraction() {
-  if (!originalImg) { showError('請先上傳一張照片'); return; }
+  if (originalImgs.length === 0) { showError('請先上傳一張照片'); return; }
 
   goBtn.disabled = true;
   resultsArea.style.display = 'none';
@@ -737,34 +774,42 @@ async function startExtraction() {
       modelStatus.classList.add('ready');
     }
 
-    // Phase 2: Run object detection
-    progressText.textContent = '🔍 AI 正在分析照片中的物件…';
     const threshold = parseInt(thresholdSlider.value) / 100;
-    const detections = await detector(originalImg.src, { threshold, percentage: false });
+    const allResults = [];
+    let lastImgDetections = null;
+    let lastImg = null;
 
-    if (!detections || detections.length === 0) {
-      throw new Error('AI 未偵測到任何物件，請換一張更清楚的照片再試');
-    }
+    // Phase 2-3: Process each image
+    for (let imgIdx = 0; imgIdx < originalImgs.length; imgIdx++) {
+      const img = originalImgs[imgIdx];
+      const label = originalImgs.length > 1 ? ` (${imgIdx + 1}/${originalImgs.length})` : '';
+      progressText.textContent = `🔍 AI 正在分析照片${label}中的物件…`;
 
-    // Phase 3: Crop each detected object
-    progressText.textContent = '✂️ 正在裁切物件並生成圖卡…';
-    const results = [];
-    for (const det of detections) {
-      const result = cropFromImage(originalImg, det.box, det.label);
-      if (result) {
-        result.score = det.score;
-        results.push(result);
+      const detections = await detector(img.src, { threshold, percentage: false });
+      if (detections && detections.length > 0) {
+        lastImgDetections = detections;
+        lastImg = img;
+        progressText.textContent = `✂️ 正在裁切物件${label}…`;
+        for (const det of detections) {
+          const result = cropFromImage(img, det.box, det.label);
+          if (result) {
+            result.score = det.score;
+            allResults.push(result);
+          }
+        }
       }
     }
 
-    if (results.length === 0) {
-      throw new Error('裁切失敗，請換一張照片再試');
+    if (allResults.length === 0) {
+      throw new Error('AI 未偵測到任何物件，請換一張更清楚的照片再試');
     }
 
-    currentResults = results;
+    currentResults = allResults;
 
-    // Phase 3.5: Draw detection overlay on original image
-    drawDetectionOverlay(detections);
+    // Draw detection overlay using last successful image's detections
+    if (lastImgDetections && lastImg) {
+      drawDetectionOverlay(lastImgDetections, lastImg);
+    }
 
     // Phase 4: Display results
     progressArea.style.display = 'none';
