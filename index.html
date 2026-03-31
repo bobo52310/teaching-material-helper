@@ -129,6 +129,48 @@
   .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--text);color:#fff;padding:.7rem 1.5rem;border-radius:12px;font-size:.85rem;opacity:0;transition:all .3s;z-index:1000;pointer-events:none}
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
+  /* Camera button */
+  .upload-alt{display:flex;gap:.5rem;margin-top:.8rem;justify-content:center}
+  .camera-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:1px solid var(--primary-light);border-radius:var(--radius-sm);background:#fff;color:var(--primary-dark);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+  .camera-btn:hover{border-color:var(--primary);background:#f0faf9}
+
+  /* Threshold slider */
+  .threshold-wrap{margin-bottom:.8rem}
+  .threshold-wrap label{display:flex;align-items:center;justify-content:space-between;font-size:.85rem;color:var(--text);margin-bottom:.3rem}
+  .threshold-wrap input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--primary-light),var(--primary));outline:none;cursor:pointer}
+  .threshold-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--primary-dark);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer}
+  .threshold-hint{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-light);margin-top:.2rem}
+
+  /* Flashcard overlay */
+  .flashcard-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+  .flashcard-overlay.active{display:flex}
+  .flashcard-container{background:var(--card);border-radius:var(--radius);max-width:420px;width:92%;max-height:90vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .flashcard-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-bottom:1px solid #eee}
+  .flashcard-progress{font-size:.9rem;font-weight:600;color:var(--primary-dark)}
+  .flashcard-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-light);padding:.2rem .5rem;border-radius:8px;transition:background .2s}
+  .flashcard-close:hover{background:#f5f5f5}
+  .flashcard{position:relative;min-height:320px;cursor:pointer;perspective:800px}
+  .flashcard-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+  .flashcard.flipped .flashcard-inner{transform:rotateY(180deg)}
+  .flashcard-front,.flashcard-back{padding:1.5rem;text-align:center}
+  .flashcard-front{display:flex;flex-direction:column;align-items:center;gap:1rem}
+  .flashcard-front img{max-width:80%;max-height:220px;object-fit:contain;border-radius:12px}
+  .flashcard-front .prompt{font-size:.9rem;color:var(--text-light)}
+  .flashcard-back{display:none}
+  .flashcard.flipped .flashcard-front{display:none}
+  .flashcard.flipped .flashcard-back{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;min-height:320px}
+  .flashcard-back .fc-zh{font-size:2rem;font-weight:700;color:var(--text)}
+  .flashcard-back .fc-en{font-size:1.1rem;color:var(--text-light)}
+  .flashcard-back .fc-tts{margin-top:.5rem;padding:.5rem 1.5rem;border:none;border-radius:10px;background:#e8f5e9;color:#2e7d32;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .2s}
+  .flashcard-back .fc-tts:hover{background:#c8e6c9}
+  .flashcard-nav{display:flex;gap:.5rem;padding:1rem 1.2rem;border-top:1px solid #eee}
+  .flashcard-nav button{flex:1;padding:.6rem;border:none;border-radius:var(--radius-sm);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+  .fc-prev,.fc-next{background:var(--primary-light);color:var(--primary-dark)}
+  .fc-prev:hover,.fc-next:hover{background:var(--primary);color:#fff}
+  .fc-flip{background:var(--accent);color:#fff}
+  .fc-flip:hover{background:var(--accent-dark)}
+  .fc-prev:disabled,.fc-next:disabled{opacity:.3;cursor:not-allowed}
+
   /* Footer */
   .footer{text-align:center;padding:1.5rem;color:var(--text-light);font-size:.8rem}
   .footer a{color:var(--primary-dark);text-decoration:none}
@@ -211,6 +253,10 @@
       <p>點擊或拖曳照片到這裡</p>
       <div class="hint">支援 JPG、PNG、WebP 等常見圖片格式</div>
     </div>
+    <div class="upload-alt" id="uploadAlt">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+      <button class="camera-btn" id="cameraBtn">📸 用相機拍照</button>
+    </div>
     <div class="preview-wrap" id="previewWrap">
       <img id="previewImg" alt="preview">
       <button class="remove-btn" id="removeBtn" title="移除照片">✕</button>
@@ -224,6 +270,11 @@
       AI 會自動偵測照片中的物件，從原圖裁切並生成雙語教學圖卡。<br>
       <span style="font-size:.8rem">首次使用需下載約 40 MB 的 AI 模型（之後會快取）</span>
     </p>
+    <div class="threshold-wrap">
+      <label>偵測靈敏度：<strong id="thresholdValue">70</strong>%</label>
+      <input type="range" id="thresholdSlider" min="30" max="95" value="70" step="5">
+      <div class="threshold-hint"><span>更多結果</span><span>更精確</span></div>
+    </div>
     <button class="go-btn" id="goBtn">✨ AI 自動偵測並切割物件</button>
     <div class="model-status" id="modelStatus"></div>
     <div class="error-box" id="errorBox"></div>
@@ -247,6 +298,7 @@
       <div class="results-toolbar">
         <span class="results-count" id="resultsCount"></span>
         <div class="toolbar-actions">
+          <button class="toolbar-btn" id="studyBtn" title="學習模式">🎴 學習</button>
           <button class="toolbar-btn" id="copyListBtn" title="複製詞彙清單">📋 複製詞彙</button>
           <button class="toolbar-btn" id="printBtn" title="列印教學卡片">🖨️ 列印</button>
         </div>
@@ -259,6 +311,32 @@
     </div>
   </div>
 
+</div>
+
+<!-- Flashcard Study Mode -->
+<div class="flashcard-overlay" id="flashcardOverlay">
+  <div class="flashcard-container">
+    <div class="flashcard-header">
+      <span class="flashcard-progress" id="fcProgress">1 / 1</span>
+      <button class="flashcard-close" id="fcClose" title="關閉">&times;</button>
+    </div>
+    <div class="flashcard" id="flashcard">
+      <div class="flashcard-front">
+        <img id="fcImg" src="" alt="">
+        <p class="prompt">看看這是什麼？點擊翻轉揭曉答案</p>
+      </div>
+      <div class="flashcard-back">
+        <div class="fc-zh" id="fcZh"></div>
+        <div class="fc-en" id="fcEn"></div>
+        <button class="fc-tts" id="fcTts">🔊 發音</button>
+      </div>
+    </div>
+    <div class="flashcard-nav">
+      <button class="fc-prev" id="fcPrev">⬅️ 上一張</button>
+      <button class="fc-flip" id="fcFlip">🔄 翻轉</button>
+      <button class="fc-next" id="fcNext">下一張 ➡️</button>
+    </div>
+  </div>
 </div>
 
 <div class="footer">
@@ -394,6 +472,13 @@ function showToast(msg, duration = 2500) {
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
 }
 
+// ── Threshold slider ──
+const thresholdSlider = document.getElementById('thresholdSlider');
+const thresholdValue  = document.getElementById('thresholdValue');
+thresholdSlider.addEventListener('input', () => {
+  thresholdValue.textContent = thresholdSlider.value;
+});
+
 // ── Upload handling ──
 uploadZone.addEventListener('click', () => fileInput.click());
 ['dragenter', 'dragover'].forEach(e => uploadZone.addEventListener(e, ev => { ev.preventDefault(); uploadZone.classList.add('dragover'); }));
@@ -401,6 +486,11 @@ uploadZone.addEventListener('click', () => fileInput.click());
 uploadZone.addEventListener('drop', ev => { if (ev.dataTransfer.files.length) handleFile(ev.dataTransfer.files[0]); });
 fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
 document.getElementById('removeBtn').addEventListener('click', removeImage);
+
+// ── Camera capture ──
+const cameraInput = document.getElementById('cameraInput');
+document.getElementById('cameraBtn').addEventListener('click', () => cameraInput.click());
+cameraInput.addEventListener('change', () => { if (cameraInput.files.length) handleFile(cameraInput.files[0]); });
 
 function handleFile(file) {
   if (!file.type.startsWith('image/')) { showError('請上傳圖片檔案'); return; }
@@ -410,6 +500,7 @@ function handleFile(file) {
     previewImg.src = dataUrl;
     previewWrap.style.display = 'block';
     uploadZone.style.display = 'none';
+    document.getElementById('uploadAlt').style.display = 'none';
     const img = new Image();
     img.onload = () => { originalImg = img; };
     img.src = dataUrl;
@@ -421,7 +512,9 @@ function removeImage() {
   originalImg = null;
   previewWrap.style.display = 'none';
   uploadZone.style.display = '';
+  document.getElementById('uploadAlt').style.display = '';
   fileInput.value = '';
+  cameraInput.value = '';
 }
 
 // ── Error display ──
@@ -523,7 +616,8 @@ async function startExtraction() {
 
     // Phase 2: Run object detection
     progressText.textContent = '🔍 AI 正在分析照片中的物件…';
-    const detections = await detector(originalImg.src, { threshold: 0.7, percentage: false });
+    const threshold = parseInt(thresholdSlider.value) / 100;
+    const detections = await detector(originalImg.src, { threshold, percentage: false });
 
     if (!detections || detections.length === 0) {
       throw new Error('AI 未偵測到任何物件，請換一張更清楚的照片再試');
@@ -713,6 +807,72 @@ if (typeof WebAssembly === 'undefined') {
   showError('您的瀏覽器不支援 WebAssembly，請使用最新版 Chrome、Firefox 或 Safari。');
   goBtn.disabled = true;
 }
+
+// ── Flashcard study mode ──
+let fcIndex = 0;
+const fcOverlay  = document.getElementById('flashcardOverlay');
+const fcCard     = document.getElementById('flashcard');
+const fcImg      = document.getElementById('fcImg');
+const fcZh       = document.getElementById('fcZh');
+const fcEn       = document.getElementById('fcEn');
+const fcProgress = document.getElementById('fcProgress');
+
+function fcShow(idx) {
+  if (currentResults.length === 0) return;
+  fcIndex = idx;
+  const r = currentResults[fcIndex];
+  fcImg.src = r.dataUrl;
+  fcZh.textContent = r.zh;
+  fcEn.textContent = r.en;
+  fcProgress.textContent = `${fcIndex + 1} / ${currentResults.length}`;
+  fcCard.classList.remove('flipped');
+  document.getElementById('fcPrev').disabled = fcIndex === 0;
+  document.getElementById('fcNext').disabled = fcIndex === currentResults.length - 1;
+}
+
+document.getElementById('studyBtn').addEventListener('click', () => {
+  if (currentResults.length === 0) return;
+  fcShow(0);
+  fcOverlay.classList.add('active');
+});
+
+document.getElementById('fcClose').addEventListener('click', () => {
+  fcOverlay.classList.remove('active');
+  window.speechSynthesis.cancel();
+});
+fcOverlay.addEventListener('click', (e) => {
+  if (e.target === fcOverlay) { fcOverlay.classList.remove('active'); window.speechSynthesis.cancel(); }
+});
+
+document.getElementById('fcFlip').addEventListener('click', () => fcCard.classList.toggle('flipped'));
+fcCard.addEventListener('click', (e) => {
+  if (e.target.closest('.fc-tts')) return;
+  fcCard.classList.toggle('flipped');
+});
+
+document.getElementById('fcPrev').addEventListener('click', () => { if (fcIndex > 0) fcShow(fcIndex - 1); });
+document.getElementById('fcNext').addEventListener('click', () => { if (fcIndex < currentResults.length - 1) fcShow(fcIndex + 1); });
+
+document.getElementById('fcTts').addEventListener('click', () => {
+  const r = currentResults[fcIndex];
+  if (!r) return;
+  window.speechSynthesis.cancel();
+  const uEn = new SpeechSynthesisUtterance(r.en);
+  uEn.lang = 'en-US'; uEn.rate = 0.8;
+  const uZh = new SpeechSynthesisUtterance(r.zh);
+  uZh.lang = 'zh-TW'; uZh.rate = 0.9;
+  uEn.onend = () => window.speechSynthesis.speak(uZh);
+  window.speechSynthesis.speak(uEn);
+});
+
+// Keyboard navigation for flashcards
+document.addEventListener('keydown', (e) => {
+  if (!fcOverlay.classList.contains('active')) return;
+  if (e.key === 'Escape') { fcOverlay.classList.remove('active'); window.speechSynthesis.cancel(); }
+  if (e.key === 'ArrowLeft' && fcIndex > 0) fcShow(fcIndex - 1);
+  if (e.key === 'ArrowRight' && fcIndex < currentResults.length - 1) fcShow(fcIndex + 1);
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); fcCard.classList.toggle('flipped'); }
+});
 
 // ── Preload model in background ──
 setTimeout(async () => {
