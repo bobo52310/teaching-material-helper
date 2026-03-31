@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教材小幫手 - Teaching Material Helper</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --primary:#4db6ac;--primary-dark:#00897b;--primary-light:#b2dfdb;
+    --accent:#ff8a65;--bg:#f0f7f7;--card:#ffffff;--text:#37474f;
+    --text-light:#78909c;--shadow:0 4px 20px rgba(0,0,0,.08);
+    --radius:16px;
+  }
+  body{font-family:'Segoe UI','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+  
+  /* header */
+  .header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;text-align:center;padding:2rem 1rem 1.5rem;position:relative;overflow:hidden}
+  .header::after{content:'';position:absolute;bottom:-30px;left:-10%;width:120%;height:60px;background:var(--bg);border-radius:50% 50% 0 0}
+  .header h1{font-size:1.8rem;font-weight:700;margin-bottom:.3rem}
+  .header p{font-size:.95rem;opacity:.9}
+  .header .emoji{font-size:2.4rem;margin-bottom:.4rem;display:block}
+
+  /* container */
+  .container{max-width:680px;margin:0 auto;padding:0 1rem 3rem}
+
+  /* cards */
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem;margin-bottom:1.2rem;transition:transform .2s}
+  .card-title{display:flex;align-items:center;gap:.5rem;font-size:1.05rem;font-weight:600;margin-bottom:1rem;color:var(--primary-dark)}
+  .card-title .step{background:var(--primary);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+
+  /* api key */
+  .api-row{display:flex;gap:.5rem}
+  .api-row input{flex:1;padding:.7rem 1rem;border:2px solid var(--primary-light);border-radius:10px;font-size:.95rem;outline:none;transition:border-color .2s}
+  .api-row input:focus{border-color:var(--primary)}
+  .toggle-vis{background:none;border:2px solid var(--primary-light);border-radius:10px;padding:.5rem .8rem;cursor:pointer;font-size:1.1rem;color:var(--text-light)}
+
+  /* upload */
+  .upload-zone{border:2px dashed var(--primary-light);border-radius:14px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:all .25s;position:relative;background:#f8fffe}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:#e8f5f3}
+  .upload-zone input{display:none}
+  .upload-zone .icon{font-size:2.5rem;margin-bottom:.5rem}
+  .upload-zone p{color:var(--text-light);font-size:.9rem}
+
+  .preview-wrap{position:relative;margin-top:1rem;text-align:center;display:none}
+  .preview-wrap img{max-width:100%;max-height:300px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+  .preview-wrap .remove-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;cursor:pointer;line-height:32px}
+
+  /* count selector */
+  .count-row{display:flex;gap:.6rem;flex-wrap:wrap}
+  .count-btn{flex:1;min-width:60px;padding:.7rem;border:2px solid var(--primary-light);border-radius:12px;background:#fff;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text)}
+  .count-btn.active,.count-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+  /* go button */
+  .go-btn{width:100%;padding:.9rem;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ef6c00);color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .25s;margin-top:.5rem}
+  .go-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,138,101,.4)}
+  .go-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+  /* progress / spinner */
+  .progress-area{text-align:center;padding:2rem 0;display:none}
+  .spinner{width:48px;height:48px;border:4px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .progress-text{color:var(--text-light);font-size:.95rem}
+
+  /* results */
+  .results-area{display:none}
+  .result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
+  .result-card{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;text-align:center}
+  .result-card img{width:100%;aspect-ratio:1;object-fit:contain;background:#fafafa;padding:.5rem}
+  .result-card .info{padding:.8rem 1rem}
+  .result-card .obj-name{font-weight:600;margin-bottom:.5rem;color:var(--primary-dark);font-size:.95rem}
+  .dl-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:background .2s}
+  .dl-btn:hover{background:var(--primary-dark)}
+
+  /* error */
+  .error-box{background:#ffebee;color:#c62828;border-radius:12px;padding:1rem 1.2rem;margin-top:1rem;font-size:.9rem;display:none;line-height:1.5}
+
+  /* footer */
+  .footer{text-align:center;padding:1.5rem;color:var(--text-light);font-size:.8rem}
+
+  /* responsive */
+  @media(max-width:480px){
+    .header h1{font-size:1.4rem}
+    .result-grid{grid-template-columns:1fr}
+    .api-row{flex-direction:column}
+    .api-row input{width:100%}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="emoji">✂️📸</span>
+  <h1>教材小幫手</h1>
+  <p>上傳照片，AI 幫你把物件一個一個切出來！</p>
+</div>
+
+<div class="container">
+
+  <!-- Step 0: API Key -->
+  <div class="card">
+    <div class="card-title">🔑 Gemini API 金鑰</div>
+    <div class="api-row">
+      <input type="password" id="apiKey" placeholder="貼上你的 Google Gemini API Key" autocomplete="off">
+      <button class="toggle-vis" onclick="toggleKey()" title="顯示/隱藏">👁️</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--text-light);margin-top:.5rem">
+      金鑰僅在瀏覽器中使用，不會傳送到其他伺服器。
+      <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary-dark)">取得金鑰 →</a>
+    </p>
+  </div>
+
+  <!-- Step 1: Upload -->
+  <div class="card">
+    <div class="card-title"><span class="step">1</span> 上傳照片</div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="icon">📷</div>
+      <p>點擊或拖曳照片到這裡</p>
+    </div>
+    <div class="preview-wrap" id="previewWrap">
+      <img id="previewImg" alt="preview">
+      <button class="remove-btn" onclick="removeImage()" title="移除">✕</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Count -->
+  <div class="card">
+    <div class="card-title"><span class="step">2</span> 要切幾個物件？</div>
+    <div class="count-row">
+      <button class="count-btn" data-n="2" onclick="pickCount(2)">2 個</button>
+      <button class="count-btn active" data-n="3" onclick="pickCount(3)">3 個</button>
+      <button class="count-btn" data-n="4" onclick="pickCount(4)">4 個</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Go -->
+  <div class="card">
+    <div class="card-title"><span class="step">3</span> 開始擷取</div>
+    <p style="font-size:.88rem;color:var(--text-light);margin-bottom:.8rem">
+      AI 會辨識照片中的物件，並逐一產生去背圖片。每張圖約需 10-20 秒，請耐心等候 ☕
+    </p>
+    <button class="go-btn" id="goBtn" onclick="startExtraction()">✨ 開始擷取物件</button>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-area" id="progressArea">
+    <div class="spinner"></div>
+    <div class="progress-text" id="progressText">正在分析照片中的物件…</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-area" id="resultsArea">
+    <div class="card">
+      <div class="card-title">🎉 擷取完成！</div>
+      <div class="result-grid" id="resultGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">教材小幫手 — Powered by Google Gemini ✨</div>
+
+<script>
+// ── State ──
+let imageBase64 = '';
+let imageMime = '';
+let objectCount = 3;
+
+// ── API Key toggle ──
+function toggleKey(){
+  const inp = document.getElementById('apiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ── Save / load key from localStorage ──
+(function(){
+  const saved = localStorage.getItem('gemini_api_key');
+  if(saved) document.getElementById('apiKey').value = saved;
+})();
+document.getElementById('apiKey').addEventListener('change', function(){
+  localStorage.setItem('gemini_api_key', this.value.trim());
+});
+
+// ── Upload handling ──
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+const previewWrap = document.getElementById('previewWrap');
+const previewImg  = document.getElementById('previewImg');
+
+['dragenter','dragover'].forEach(e=>uploadZone.addEventListener(e,ev=>{ev.preventDefault();uploadZone.classList.add('dragover')}));
+['dragleave','drop'].forEach(e=>uploadZone.addEventListener(e,ev=>{ev.preventDefault();uploadZone.classList.remove('dragover')}));
+uploadZone.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length) handleFile(ev.dataTransfer.files[0])});
+fileInput.addEventListener('change',()=>{if(fileInput.files.length) handleFile(fileInput.files[0])});
+
+function handleFile(file){
+  if(!file.type.startsWith('image/')){showError('請上傳圖片檔案');return}
+  imageMime = file.type;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    imageBase64 = dataUrl.split(',')[1];
+    previewImg.src = dataUrl;
+    previewWrap.style.display = 'block';
+    uploadZone.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage(){
+  imageBase64 = ''; imageMime = '';
+  previewWrap.style.display = 'none';
+  uploadZone.style.display = '';
+  fileInput.value = '';
+}
+
+// ── Count picker ──
+function pickCount(n){
+  objectCount = n;
+  document.querySelectorAll('.count-btn').forEach(b=>b.classList.toggle('active', +b.dataset.n===n));
+}
+
+// ── Error display ──
+function showError(msg){
+  const box = document.getElementById('errorBox');
+  box.textContent = msg; box.style.display = 'block';
+  setTimeout(()=>box.style.display='none', 8000);
+}
+
+// ── Gemini API call helper ──
+async function callGemini(apiKey, contents, genConfig = {}){
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+  const body = { contents, generationConfig: genConfig };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if(!resp.ok){
+    const err = await resp.json().catch(()=>({}));
+    throw new Error(err?.error?.message || `API 錯誤 (${resp.status})`);
+  }
+  return resp.json();
+}
+
+// ── Main extraction flow ──
+async function startExtraction(){
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if(!apiKey){showError('請先輸入 Gemini API 金鑰');return}
+  if(!imageBase64){showError('請先上傳一張照片');return}
+
+  const goBtn = document.getElementById('goBtn');
+  const progressArea = document.getElementById('progressArea');
+  const progressText = document.getElementById('progressText');
+  const resultsArea  = document.getElementById('resultsArea');
+  const resultGrid   = document.getElementById('resultGrid');
+
+  goBtn.disabled = true;
+  resultsArea.style.display = 'none';
+  resultGrid.innerHTML = '';
+  progressArea.style.display = 'block';
+  document.getElementById('errorBox').style.display = 'none';
+
+  try {
+    // ── Step A: Identify objects ──
+    progressText.textContent = '🔍 正在辨識照片中的物件…';
+
+    const identifyPrompt = `你是一個教材圖片分析專家。請仔細觀察這張照片，找出照片中最明顯的 ${objectCount} 個獨立物件/物品。
+
+請用以下 JSON 格式回覆（只回傳 JSON，不要其他文字）：
+[
+  {"name": "物件名稱（繁體中文）", "description": "簡短描述物件外觀、顏色、特徵"},
+  ...
+]
+
+注意：
+- 只列出 ${objectCount} 個最明顯的物件
+- 名稱使用繁體中文
+- 描述要足夠具體，讓人能根據描述重新繪製該物件`;
+
+    const identifyResult = await callGemini(apiKey, [{
+      role: 'user',
+      parts: [
+        { inlineData: { mimeType: imageMime, data: imageBase64 } },
+        { text: identifyPrompt }
+      ]
+    }]);
+
+    let objectsText = identifyResult.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Extract JSON from response
+    const jsonMatch = objectsText.match(/\[[\s\S]*?\]/);
+    if(!jsonMatch) throw new Error('AI 無法辨識物件，請換一張更清楚的照片再試');
+    
+    let objects;
+    try { objects = JSON.parse(jsonMatch[0]); } catch(e){ throw new Error('AI 回覆格式異常，請重試'); }
+    if(!Array.isArray(objects) || objects.length === 0) throw new Error('未偵測到物件');
+
+    objects = objects.slice(0, objectCount);
+
+    // ── Step B: Generate each object image ──
+    const results = [];
+    for(let i = 0; i < objects.length; i++){
+      const obj = objects[i];
+      progressText.textContent = `✂️ 正在擷取第 ${i+1}/${objects.length} 個物件：${obj.name}…`;
+
+      const genPrompt = `請根據這張照片中的「${obj.name}」（${obj.description}），生成一張乾淨的去背圖片。
+
+要求：
+- 只畫出「${obj.name}」這一個物件，不要其他東西
+- 純白色背景
+- 物件要清晰、完整、置中
+- 風格要盡量還原照片中該物件的真實外觀
+- 圖片品質要高，適合做教材使用`;
+
+      const genResult = await callGemini(apiKey, [{
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: imageMime, data: imageBase64 } },
+          { text: genPrompt }
+        ]
+      }], { responseModalities: ['TEXT', 'IMAGE'] });
+
+      // Extract generated image
+      const parts = genResult.candidates?.[0]?.content?.parts || [];
+      let imgData = null;
+      let imgMime = 'image/png';
+      for(const part of parts){
+        if(part.inlineData){
+          imgData = part.inlineData.data;
+          imgMime = part.inlineData.mimeType || 'image/png';
+          break;
+        }
+      }
+
+      if(imgData){
+        results.push({ name: obj.name, data: imgData, mime: imgMime });
+      } else {
+        // If no image returned, note it
+        results.push({ name: obj.name, data: null, mime: null, error: true });
+      }
+    }
+
+    // ── Step C: Show results ──
+    progressArea.style.display = 'none';
+    resultsArea.style.display = 'block';
+
+    for(const r of results){
+      const card = document.createElement('div');
+      card.className = 'result-card';
+
+      if(r.data){
+        const ext = r.mime.includes('png') ? 'png' : 'jpeg';
+        const dataUrl = `data:${r.mime};base64,${r.data}`;
+        card.innerHTML = `
+          <img src="${dataUrl}" alt="${r.name}">
+          <div class="info">
+            <div class="obj-name">${r.name}</div>
+            <button class="dl-btn" onclick="downloadImg('${r.name}','${dataUrl}','${ext}')">⬇️ 下載圖片</button>
+          </div>`;
+      } else {
+        card.innerHTML = `
+          <div style="padding:2rem;color:var(--text-light)">
+            <div style="font-size:2rem;margin-bottom:.5rem">⚠️</div>
+            <div class="obj-name">${r.name}</div>
+            <p style="font-size:.85rem">此物件未能產生圖片，請重試</p>
+          </div>`;
+      }
+      resultGrid.appendChild(card);
+    }
+
+    resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch(err){
+    progressArea.style.display = 'none';
+    showError('❌ ' + (err.message || '發生未知錯誤'));
+    console.error(err);
+  } finally {
+    goBtn.disabled = false;
+  }
+}
+
+// ── Download helper ──
+function downloadImg(name, dataUrl, ext){
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `${name}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
