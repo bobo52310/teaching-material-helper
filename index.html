@@ -143,6 +143,44 @@
   .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--text);color:#fff;padding:.7rem 1.5rem;border-radius:12px;font-size:.85rem;opacity:0;transition:all .3s;z-index:1000;pointer-events:none}
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
+  /* Export dropdown */
+  .export-wrap{position:relative;display:inline-block}
+  .export-menu{display:none;position:absolute;top:100%;left:0;margin-top:.3rem;background:#fff;border:1px solid #ddd;border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;min-width:180px;overflow:hidden}
+  .export-menu.open{display:block}
+  .export-item{display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;font-size:.82rem;color:var(--text);cursor:pointer;transition:background .15s;border:none;background:none;width:100%;text-align:left}
+  .export-item:hover{background:#f0faf9;color:var(--primary-dark)}
+  .export-item+.export-item{border-top:1px solid #f0f0f0}
+
+  /* Worksheet modal */
+  .worksheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;overflow-y:auto;padding:1rem}
+  .worksheet-overlay.active{display:block}
+  .worksheet{max-width:800px;margin:0 auto;background:#fff;border-radius:var(--radius);padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+  .ws-header{text-align:center;margin-bottom:1.5rem;border-bottom:2px solid var(--primary);padding-bottom:1rem}
+  .ws-header h2{font-size:1.4rem;color:var(--primary-dark)}
+  .ws-header p{font-size:.85rem;color:var(--text-light);margin-top:.3rem}
+  .ws-section{margin-bottom:1.5rem}
+  .ws-section h3{font-size:1rem;color:var(--primary-dark);margin-bottom:.8rem;padding-left:.5rem;border-left:3px solid var(--primary)}
+  .ws-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem}
+  .ws-item{text-align:center;border:1px solid #e0e0e0;border-radius:12px;padding:.8rem;page-break-inside:avoid}
+  .ws-item img{width:100%;aspect-ratio:1;object-fit:contain;border-radius:8px;background:#fafafa;margin-bottom:.5rem}
+  .ws-item .ws-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;font-size:.75rem;font-weight:700;margin-bottom:.3rem}
+  .ws-blank{border-bottom:2px dashed #bbb;min-width:80px;display:inline-block;height:1.8rem;margin-top:.3rem}
+  .ws-wordbank{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;padding:1rem;background:#f8fffe;border-radius:12px;border:1px dashed var(--primary-light)}
+  .ws-word{padding:.4rem 1rem;border-radius:20px;background:var(--primary-light);color:var(--primary-dark);font-size:.9rem;font-weight:600}
+  .ws-actions{display:flex;gap:.5rem;justify-content:center;margin-top:1.5rem}
+  .ws-actions button{padding:.6rem 1.5rem;border-radius:var(--radius-sm);font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
+  .ws-print{border:none;background:var(--primary);color:#fff}
+  .ws-print:hover{background:var(--primary-dark)}
+  .ws-close{border:1px solid #ccc;background:#fff;color:var(--text)}
+  .ws-close:hover{background:#f5f5f5}
+
+  @media print{
+    .worksheet-overlay{position:static;background:none;padding:0}
+    .worksheet{box-shadow:none;border-radius:0;padding:0}
+    .ws-actions{display:none!important}
+    .ws-item{break-inside:avoid}
+  }
+
   /* Camera button */
   .upload-alt{display:flex;gap:.5rem;margin-top:.8rem;justify-content:center}
   .camera-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:1px solid var(--primary-light);border-radius:var(--radius-sm);background:#fff;color:var(--primary-dark);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
@@ -314,6 +352,14 @@
         <div class="toolbar-actions">
           <button class="toolbar-btn" id="studyBtn" title="學習模式">🎴 學習</button>
           <button class="toolbar-btn" id="copyListBtn" title="複製詞彙清單">📋 複製詞彙</button>
+          <div class="export-wrap">
+            <button class="toolbar-btn" id="exportBtn" title="匯出">📤 匯出</button>
+            <div class="export-menu" id="exportMenu">
+              <button class="export-item" id="exportQuizlet">📝 Quizlet 格式 (TSV)</button>
+              <button class="export-item" id="exportAnki">🗂️ Anki 格式 (HTML)</button>
+              <button class="export-item" id="exportWorksheet">📄 生成測驗卷</button>
+            </div>
+          </div>
           <button class="toolbar-btn" id="printBtn" title="列印教學卡片">🖨️ 列印</button>
         </div>
       </div>
@@ -333,6 +379,11 @@
     </div>
   </div>
 
+</div>
+
+<!-- Worksheet Modal -->
+<div class="worksheet-overlay" id="worksheetOverlay">
+  <div class="worksheet" id="worksheetContent"></div>
 </div>
 
 <!-- Flashcard Study Mode -->
@@ -882,6 +933,84 @@ if (typeof WebAssembly === 'undefined') {
   showError('您的瀏覽器不支援 WebAssembly，請使用最新版 Chrome、Firefox 或 Safari。');
   goBtn.disabled = true;
 }
+
+// ── Export dropdown ──
+const exportBtn = document.getElementById('exportBtn');
+const exportMenu = document.getElementById('exportMenu');
+exportBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  exportMenu.classList.toggle('open');
+});
+document.addEventListener('click', () => exportMenu.classList.remove('open'));
+exportMenu.addEventListener('click', (e) => e.stopPropagation());
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Export: Quizlet TSV ──
+document.getElementById('exportQuizlet').addEventListener('click', () => {
+  if (currentResults.length === 0) return;
+  const lines = currentResults.map(r => `${r.en}\t${r.zh}`);
+  downloadBlob(new Blob([lines.join('\n')], { type: 'text/tab-separated-values' }), 'vocabulary-quizlet.tsv');
+  exportMenu.classList.remove('open');
+  showToast('✅ Quizlet 格式已下載！匯入：Quizlet → 建立 → 匯入');
+});
+
+// ── Export: Anki TSV with HTML images ──
+document.getElementById('exportAnki').addEventListener('click', () => {
+  if (currentResults.length === 0) return;
+  const lines = currentResults.map(r => {
+    const front = `<img src="${r.dataUrl}" style="max-width:300px;max-height:300px"><br><b>${r.en}</b>`;
+    const back = `<div style="font-size:2em;font-weight:bold">${r.zh}</div><div>${r.en}</div>`;
+    return `${front}\t${back}`;
+  });
+  downloadBlob(new Blob([lines.join('\n')], { type: 'text/tab-separated-values' }), 'vocabulary-anki.txt');
+  exportMenu.classList.remove('open');
+  showToast('✅ Anki 格式已下載！匯入：Anki → 檔案 → 匯入');
+});
+
+// ── Export: Worksheet Generator ──
+const worksheetOverlay = document.getElementById('worksheetOverlay');
+document.getElementById('exportWorksheet').addEventListener('click', () => {
+  if (currentResults.length === 0) return;
+  exportMenu.classList.remove('open');
+  const shuffled = [...currentResults].sort(() => Math.random() - 0.5);
+  const wordBank = shuffled.map(r => `<span class="ws-word">${r.zh} (${r.en})</span>`).join('');
+  const items = currentResults.map((r, i) => `
+    <div class="ws-item">
+      <div class="ws-num">${i + 1}</div>
+      <img src="${r.dataUrl}" alt="object ${i + 1}">
+      <div class="ws-blank"></div>
+    </div>`).join('');
+
+  document.getElementById('worksheetContent').innerHTML = `
+    <div class="ws-header">
+      <h2>📝 詞彙測驗卷</h2>
+      <p>姓名：＿＿＿＿＿＿　日期：＿＿＿＿＿＿　分數：＿＿＿ / ${currentResults.length}</p>
+    </div>
+    <div class="ws-section">
+      <h3>看圖寫出正確的名稱</h3>
+      <div class="ws-grid">${items}</div>
+    </div>
+    <div class="ws-section">
+      <h3>字庫 Word Bank</h3>
+      <div class="ws-wordbank">${wordBank}</div>
+    </div>
+    <div class="ws-actions">
+      <button class="ws-print" onclick="window.print()">🖨️ 列印測驗卷</button>
+      <button class="ws-close" id="wsClose">✕ 關閉</button>
+    </div>`;
+  worksheetOverlay.classList.add('active');
+  document.getElementById('wsClose').addEventListener('click', () => worksheetOverlay.classList.remove('active'));
+});
+worksheetOverlay.addEventListener('click', (e) => {
+  if (e.target === worksheetOverlay) worksheetOverlay.classList.remove('active');
+});
 
 // ── Flashcard study mode ──
 let fcIndex = 0;
