@@ -154,6 +154,15 @@
   .dl-btn:hover{background:var(--primary-dark)}
   .tts-btn{background:#e8f5e9;color:#2e7d32}
   .tts-btn:hover{background:#c8e6c9}
+
+  /* Card entrance animation */
+  @keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .vocab-card{animation:cardIn .35s ease both}
+
+  /* Re-detect button */
+  .redetect-wrap{text-align:center;margin-top:.8rem}
+  .redetect-btn{padding:.5rem 1.5rem;border:1px solid var(--text-light);border-radius:var(--radius-sm);background:var(--card);color:var(--text-light);font-size:.82rem;cursor:pointer;transition:all .2s}
+  .redetect-btn:hover{border-color:var(--primary);color:var(--primary-dark)}
   .tts-btn.speaking{background:#2e7d32;color:#fff}
 
   /* Download all */
@@ -325,8 +334,8 @@
   <!-- Step 1: Upload -->
   <div class="card">
     <div class="card-title"><span class="step">1</span> 上傳照片</div>
-    <div class="upload-zone" id="uploadZone">
-      <input type="file" id="fileInput" accept="image/*" multiple>
+    <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-label="上傳照片">
+      <input type="file" id="fileInput" accept="image/*" multiple aria-label="選擇圖片檔案">
       <div class="icon">📷</div>
       <p>點擊或拖曳照片到這裡（可多選）</p>
       <div class="hint">支援 JPG、PNG、WebP 等常見圖片格式</div>
@@ -350,7 +359,7 @@
     </p>
     <div class="threshold-wrap">
       <label>偵測靈敏度：<strong id="thresholdValue">70</strong>%</label>
-      <input type="range" id="thresholdSlider" min="30" max="95" value="70" step="5">
+      <input type="range" id="thresholdSlider" min="30" max="95" value="70" step="5" aria-label="偵測靈敏度">
       <div class="threshold-hint"><span>更多結果</span><span>更精確</span></div>
     </div>
     <button class="go-btn" id="goBtn">✨ AI 自動偵測並切割物件</button>
@@ -407,6 +416,9 @@
       <div class="result-grid" id="resultGrid"></div>
       <div class="dl-all-wrap" id="dlAllWrap" style="display:none">
         <button class="dl-all-btn" id="dlAllBtn">📦 全部下載圖片</button>
+      </div>
+      <div class="redetect-wrap" id="redetectWrap" style="display:none">
+        <button class="redetect-btn" id="redetectBtn">🔄 調整靈敏度後重新偵測</button>
       </div>
     </div>
   </div>
@@ -610,6 +622,7 @@ const thumbCount = document.getElementById('thumbCount');
 let originalImgs = [];
 
 uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
 ['dragenter', 'dragover'].forEach(e => uploadZone.addEventListener(e, ev => { ev.preventDefault(); uploadZone.classList.add('dragover'); }));
 ['dragleave', 'drop'].forEach(e => uploadZone.addEventListener(e, ev => { ev.preventDefault(); uploadZone.classList.remove('dragover'); }));
 uploadZone.addEventListener('drop', ev => { if (ev.dataTransfer.files.length) handleFiles(ev.dataTransfer.files); });
@@ -702,6 +715,32 @@ async function loadModel(onProgress) {
   } finally {
     modelLoading = false;
   }
+}
+
+// ── Resize large images for faster detection ──
+const MAX_DETECT_DIM = 1024;
+function resizeForDetection(img) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  if (w <= MAX_DETECT_DIM && h <= MAX_DETECT_DIM) return img.src;
+  const scale = MAX_DETECT_DIM / Math.max(w, h);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+// ── Scale detection boxes back to original image coords ──
+function scaleBox(box, img, detectSrc) {
+  const tempImg = new Image();
+  // If resized, boxes are in resized coords — scale back to original
+  const ow = img.naturalWidth, oh = img.naturalHeight;
+  if (ow <= MAX_DETECT_DIM && oh <= MAX_DETECT_DIM) return box;
+  const scale = MAX_DETECT_DIM / Math.max(ow, oh);
+  return {
+    xmin: box.xmin / scale, ymin: box.ymin / scale,
+    xmax: box.xmax / scale, ymax: box.ymax / scale,
+  };
 }
 
 // ── Crop object from image using bounding box ──
@@ -833,13 +872,15 @@ async function startExtraction() {
       const label = originalImgs.length > 1 ? ` (${imgIdx + 1}/${originalImgs.length})` : '';
       progressText.textContent = `🔍 AI 正在分析照片${label}中的物件…`;
 
-      const detections = await detector(img.src, { threshold, percentage: false });
+      const detectSrc = resizeForDetection(img);
+      const detections = await detector(detectSrc, { threshold, percentage: false });
       if (detections && detections.length > 0) {
         lastImgDetections = detections;
         lastImg = img;
         progressText.textContent = `✂️ 正在裁切物件${label}…`;
         for (const det of detections) {
-          const result = cropFromImage(img, det.box, det.label);
+          const scaledBox = scaleBox(det.box, img);
+          const result = cropFromImage(img, scaledBox, det.label);
           if (result) {
             result.score = det.score;
             allResults.push(result);
@@ -877,6 +918,7 @@ async function startExtraction() {
     renderResults(currentViewMode);
 
     if (currentResults.length >= 2) dlAllWrap.style.display = 'block';
+    document.getElementById('redetectWrap').style.display = 'block';
     resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } catch (err) {
@@ -907,7 +949,8 @@ function buildCardHTML(r, i) {
   const pct = Math.round(r.score * 100);
   const confClass = pct >= 90 ? 'high' : pct >= 75 ? 'medium' : 'low';
   const badge = r.count > 1 ? `<span class="dedup-badge">×${r.count}</span>` : '';
-  return `<div class="vocab-card" style="position:relative">
+  const delay = Math.min(i * 60, 600);
+  return `<div class="vocab-card" style="position:relative;animation-delay:${delay}ms">
     ${badge}
     <img class="card-img" src="${r.dataUrl}" alt="${r.zh}">
     <div class="card-body">
@@ -1078,6 +1121,14 @@ document.getElementById('dlAllBtn').addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
   });
+});
+
+// ── Re-detect with new threshold ──
+document.getElementById('redetectBtn').addEventListener('click', () => {
+  resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Scroll to threshold slider first so user can adjust
+  document.querySelector('.threshold-wrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showToast('調整上方靈敏度滑桿後，點擊「AI 自動偵測」重新分析');
 });
 
 // ── WebAssembly check ──
