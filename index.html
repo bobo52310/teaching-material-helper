@@ -131,10 +131,11 @@
   .label-row .edit-hint{display:none;font-size:.65rem;color:var(--text-light);position:absolute;right:0;top:0}
   .label-row:hover .edit-hint{display:block}
 
-  /* Detection overlay */
+  /* Detection overlay + manual crop */
   .detection-overlay{position:relative;margin-top:1rem;text-align:center}
-  .detection-overlay canvas{max-width:100%;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
-  .detection-toggle{margin-top:.5rem}
+  .detection-overlay canvas{max-width:100%;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);cursor:crosshair}
+  .detection-toggle{margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap}
+  .crop-hint{font-size:.78rem;color:var(--accent);font-weight:600}
   .detection-toggle label{display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-light);cursor:pointer}
   .detection-toggle input{accent-color:var(--primary)}
 
@@ -405,11 +406,12 @@
         </div>
       </div>
 
-      <!-- Detection overlay -->
+      <!-- Detection overlay + manual crop -->
       <div class="detection-overlay" id="detectionOverlay" style="display:none">
         <canvas id="detectionCanvas"></canvas>
         <div class="detection-toggle">
           <label><input type="checkbox" id="showBoxes" checked> 顯示偵測框</label>
+          <span class="crop-hint">✂️ 在圖上拖曳可手動框選物件</span>
         </div>
       </div>
 
@@ -576,6 +578,7 @@ const LABELS = {
   'teddy bear':    { zh: '泰迪熊', en: 'Teddy Bear' },
   'hair drier':    { zh: '吹風機', en: 'Hair Drier' },
   'toothbrush':    { zh: '牙刷', en: 'Toothbrush' },
+  'custom':        { zh: '自訂物件', en: 'Custom Object' },
 };
 
 function getLabel(cocoLabel) {
@@ -812,6 +815,90 @@ function drawDetectionOverlay(detections, img) {
 
 showBoxesCheckbox.addEventListener('change', () => {
   if (lastDetections.length > 0) drawDetectionOverlay(lastDetections);
+});
+
+// ── Manual crop on canvas ──
+let cropStart = null;
+detectionCanvas.addEventListener('mousedown', (e) => {
+  const rect = detectionCanvas.getBoundingClientRect();
+  cropStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+});
+detectionCanvas.addEventListener('mousemove', (e) => {
+  if (!cropStart) return;
+  // Redraw overlay then draw selection rect
+  if (lastDetections.length > 0) drawDetectionOverlay(lastDetections);
+  const rect = detectionCanvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const ctx = detectionCanvas.getContext('2d');
+  ctx.strokeStyle = 'var(--accent, #ff8a65)';
+  ctx.setLineDash([6, 3]);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cropStart.x, cropStart.y, cx - cropStart.x, cy - cropStart.y);
+  ctx.setLineDash([]);
+});
+detectionCanvas.addEventListener('mouseup', (e) => {
+  if (!cropStart || !overlayImgRef) return;
+  const rect = detectionCanvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const sx = Math.min(cropStart.x, cx), sy = Math.min(cropStart.y, cy);
+  const sw = Math.abs(cx - cropStart.x), sh = Math.abs(cy - cropStart.y);
+  cropStart = null;
+  if (sw < 10 || sh < 10) return; // too small
+
+  // Convert canvas coords to original image coords
+  const scaleX = overlayImgRef.naturalWidth / detectionCanvas.width;
+  const scaleY = overlayImgRef.naturalHeight / detectionCanvas.height;
+  const box = { xmin: sx * scaleX, ymin: sy * scaleY, xmax: (sx + sw) * scaleX, ymax: (sy + sh) * scaleY };
+  const result = cropFromImage(overlayImgRef, box, 'custom');
+  if (result) {
+    result.score = 1;
+    result.zh = '自訂物件';
+    result.en = 'Custom Object';
+    result.cocoLabel = 'custom';
+    result.category = '📦 其他';
+    currentResults.push(result);
+    renderResults(currentViewMode);
+    showToast('✅ 已新增手動框選的物件！');
+  }
+});
+// Touch support for mobile
+detectionCanvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t = e.touches[0], rect = detectionCanvas.getBoundingClientRect();
+  cropStart = { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}, { passive: false });
+detectionCanvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!cropStart) return;
+  if (lastDetections.length > 0) drawDetectionOverlay(lastDetections);
+  const t = e.touches[0], rect = detectionCanvas.getBoundingClientRect();
+  const cx = t.clientX - rect.left, cy = t.clientY - rect.top;
+  const ctx = detectionCanvas.getContext('2d');
+  ctx.strokeStyle = '#ff8a65';
+  ctx.setLineDash([6, 3]);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cropStart.x, cropStart.y, cx - cropStart.x, cy - cropStart.y);
+  ctx.setLineDash([]);
+}, { passive: false });
+detectionCanvas.addEventListener('touchend', (e) => {
+  if (!cropStart || !overlayImgRef) { cropStart = null; return; }
+  const t = e.changedTouches[0], rect = detectionCanvas.getBoundingClientRect();
+  const cx = t.clientX - rect.left, cy = t.clientY - rect.top;
+  const sx = Math.min(cropStart.x, cx), sy = Math.min(cropStart.y, cy);
+  const sw = Math.abs(cx - cropStart.x), sh = Math.abs(cy - cropStart.y);
+  cropStart = null;
+  if (sw < 10 || sh < 10) return;
+  const scaleX = overlayImgRef.naturalWidth / detectionCanvas.width;
+  const scaleY = overlayImgRef.naturalHeight / detectionCanvas.height;
+  const box = { xmin: sx * scaleX, ymin: sy * scaleY, xmax: (sx + sw) * scaleX, ymax: (sy + sh) * scaleY };
+  const result = cropFromImage(overlayImgRef, box, 'custom');
+  if (result) {
+    result.score = 1; result.zh = '自訂物件'; result.en = 'Custom Object';
+    result.cocoLabel = 'custom'; result.category = '📦 其他';
+    currentResults.push(result);
+    renderResults(currentViewMode);
+    showToast('✅ 已新增手動框選的物件！');
+  }
 });
 
 // ── Copy vocabulary list ──
