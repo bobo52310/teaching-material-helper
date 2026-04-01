@@ -21,8 +21,14 @@
     --text-light:#78909c;--shadow:0 4px 20px rgba(0,0,0,.08);
     --radius:16px;--radius-sm:10px;
     --success:#43a047;--warning:#f9a825;
+    --card-img-bg:#fafafa;
   }
-  body{font-family:'Segoe UI','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+  [data-theme="dark"]{
+    --bg:#1a1a2e;--card:#16213e;--text:#e0e0e0;
+    --text-light:#90a4ae;--shadow:0 4px 20px rgba(0,0,0,.3);
+    --card-img-bg:#0f1626;
+  }
+  body{font-family:'Segoe UI','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;transition:background .3s,color .3s}
 
   /* Header */
   .header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;text-align:center;padding:2.5rem 1rem 2rem;position:relative;overflow:hidden}
@@ -31,6 +37,8 @@
   .header .subtitle{font-size:.95rem;opacity:.9}
   .header .badge{display:inline-block;background:rgba(255,255,255,.2);padding:.2rem .8rem;border-radius:20px;font-size:.75rem;margin-top:.5rem;backdrop-filter:blur(4px)}
   .header .emoji{font-size:2.4rem;margin-bottom:.4rem;display:block}
+  .theme-toggle{position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.1rem;cursor:pointer;transition:background .2s;backdrop-filter:blur(4px)}
+  .theme-toggle:hover{background:rgba(255,255,255,.35)}
 
   /* Container */
   .container{max-width:720px;margin:0 auto;padding:0 1rem 3rem}
@@ -48,8 +56,8 @@
   .card-title .step{background:var(--primary);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
 
   /* Upload */
-  .upload-zone{border:2px dashed var(--primary-light);border-radius:14px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:all .25s;position:relative;background:#f8fffe}
-  .upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:#e8f5f3;transform:scale(1.01)}
+  .upload-zone{border:2px dashed var(--primary-light);border-radius:14px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:all .25s;position:relative;background:var(--card)}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:var(--card-img-bg);transform:scale(1.01)}
   .upload-zone input{display:none}
   .upload-zone .icon{font-size:2.5rem;margin-bottom:.5rem}
   .upload-zone p{color:var(--text-light);font-size:.9rem}
@@ -89,14 +97,14 @@
   .results-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid #e0e0e0}
   .results-count{font-size:.9rem;color:var(--text-light)}
   .toolbar-actions{display:flex;gap:.5rem}
-  .toolbar-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .8rem;border:1px solid #ccc;border-radius:var(--radius-sm);background:#fff;color:var(--text);font-size:.8rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .toolbar-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .8rem;border:1px solid #ccc;border-radius:var(--radius-sm);background:var(--card);color:var(--text);font-size:.8rem;cursor:pointer;transition:all .2s;white-space:nowrap}
   .toolbar-btn:hover{border-color:var(--primary);color:var(--primary-dark);background:#f0faf9}
   .toolbar-btn.copied{border-color:var(--success);color:var(--success)}
   .toolbar-btn.active{border-color:var(--primary);background:var(--primary);color:#fff}
 
   /* View toggle */
   .view-toggle{display:flex;border:1px solid #ccc;border-radius:var(--radius-sm);overflow:hidden}
-  .view-toggle button{padding:.35rem .6rem;border:none;background:#fff;color:var(--text-light);font-size:.78rem;cursor:pointer;transition:all .15s}
+  .view-toggle button{padding:.35rem .6rem;border:none;background:var(--card);color:var(--text-light);font-size:.78rem;cursor:pointer;transition:all .15s}
   .view-toggle button:not(:last-child){border-right:1px solid #ccc}
   .view-toggle button.active{background:var(--primary);color:#fff}
 
@@ -109,9 +117,9 @@
   .result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
 
   /* Vocabulary card */
-  .vocab-card{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;transition:transform .2s,box-shadow .2s}
+  .vocab-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;transition:transform .2s,box-shadow .2s}
   .vocab-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.12)}
-  .vocab-card .card-img{width:100%;aspect-ratio:1;object-fit:contain;background:#fafafa;padding:.5rem;display:block}
+  .vocab-card .card-img{width:100%;aspect-ratio:1;object-fit:contain;background:var(--card-img-bg);padding:.5rem;display:block}
   .vocab-card .card-body{padding:.8rem 1rem 1rem}
 
   /* Bilingual labels */
@@ -162,7 +170,7 @@
 
   /* Export dropdown */
   .export-wrap{position:relative;display:inline-block}
-  .export-menu{display:none;position:absolute;top:100%;left:0;margin-top:.3rem;background:#fff;border:1px solid #ddd;border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;min-width:180px;overflow:hidden}
+  .export-menu{display:none;position:absolute;top:100%;left:0;margin-top:.3rem;background:var(--card);border:1px solid #ddd;border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;min-width:180px;overflow:hidden}
   .export-menu.open{display:block}
   .export-item{display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;font-size:.82rem;color:var(--text);cursor:pointer;transition:background .15s;border:none;background:none;width:100%;text-align:left}
   .export-item:hover{background:#f0faf9;color:var(--primary-dark)}
@@ -200,7 +208,7 @@
 
   /* Camera button */
   .upload-alt{display:flex;gap:.5rem;margin-top:.8rem;justify-content:center}
-  .camera-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:1px solid var(--primary-light);border-radius:var(--radius-sm);background:#fff;color:var(--primary-dark);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+  .camera-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.2rem;border:1px solid var(--primary-light);border-radius:var(--radius-sm);background:var(--card);color:var(--primary-dark);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
   .camera-btn:hover{border-color:var(--primary);background:#f0faf9}
 
   /* Threshold slider */
@@ -280,6 +288,7 @@
 <body>
 
 <div class="header">
+  <button class="theme-toggle" id="themeToggle" title="切換深色模式">🌙</button>
   <span class="emoji">✂️📸</span>
   <h1>教材小幫手</h1>
   <p class="subtitle">上傳照片，AI 幫你把物件一個一個切出來，生成雙語教學圖卡！</p>
@@ -1242,6 +1251,24 @@ setTimeout(async () => {
     console.warn('Background model preload failed:', e);
   }
 }, 1500);
+
+// ── Dark mode toggle ──
+const themeToggle = document.getElementById('themeToggle');
+function setTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  themeToggle.textContent = dark ? '☀️' : '🌙';
+  try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
+}
+themeToggle.addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  setTheme(!isDark);
+});
+// Restore saved preference or match system
+try {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') setTheme(true);
+  else if (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme(true);
+} catch {}
 
 // ── Register Service Worker for offline support ──
 if ('serviceWorker' in navigator) {
