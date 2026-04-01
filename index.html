@@ -92,6 +92,18 @@
   .toolbar-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .8rem;border:1px solid #ccc;border-radius:var(--radius-sm);background:#fff;color:var(--text);font-size:.8rem;cursor:pointer;transition:all .2s;white-space:nowrap}
   .toolbar-btn:hover{border-color:var(--primary);color:var(--primary-dark);background:#f0faf9}
   .toolbar-btn.copied{border-color:var(--success);color:var(--success)}
+  .toolbar-btn.active{border-color:var(--primary);background:var(--primary);color:#fff}
+
+  /* View toggle */
+  .view-toggle{display:flex;border:1px solid #ccc;border-radius:var(--radius-sm);overflow:hidden}
+  .view-toggle button{padding:.35rem .6rem;border:none;background:#fff;color:var(--text-light);font-size:.78rem;cursor:pointer;transition:all .15s}
+  .view-toggle button:not(:last-child){border-right:1px solid #ccc}
+  .view-toggle button.active{background:var(--primary);color:#fff}
+
+  /* Category group */
+  .category-group{margin-bottom:1.2rem}
+  .category-title{font-size:.95rem;font-weight:600;color:var(--primary-dark);margin-bottom:.6rem;padding:.3rem .6rem;background:#f0faf9;border-radius:8px;display:inline-block}
+  .dedup-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-size:.65rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 5px;position:absolute;top:6px;left:6px;z-index:1}
 
   /* Result grid */
   .result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
@@ -353,7 +365,13 @@
 
       <!-- Toolbar -->
       <div class="results-toolbar">
-        <span class="results-count" id="resultsCount"></span>
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <span class="results-count" id="resultsCount"></span>
+          <div class="view-toggle">
+            <button id="viewGrid" class="active" title="格狀顯示">▦</button>
+            <button id="viewCategory" title="分類顯示">☷</button>
+          </div>
+        </div>
         <div class="toolbar-actions">
           <button class="toolbar-btn" id="studyBtn" title="學習模式">🎴 學習</button>
           <button class="toolbar-btn" id="copyListBtn" title="複製詞彙清單">📋 複製詞彙</button>
@@ -433,6 +451,27 @@ env.allowLocalModels = false;
 let detector = null;
 let modelLoading = false;
 let currentResults = [];
+
+// ── COCO categories ──
+const CATEGORIES = {
+  '🧑 人物': ['person'],
+  '🐾 動物': ['bird','cat','dog','horse','sheep','cow','elephant','bear','zebra','giraffe'],
+  '🚗 交通': ['bicycle','car','motorcycle','airplane','bus','train','truck','boat'],
+  '🍎 食物': ['banana','apple','sandwich','orange','broccoli','carrot','hot dog','pizza','donut','cake'],
+  '🍽️ 廚房': ['bottle','wine glass','cup','fork','knife','spoon','bowl','microwave','oven','toaster','sink','refrigerator'],
+  '🪑 家具': ['chair','couch','bed','dining table','toilet','potted plant'],
+  '📱 電子': ['tv','laptop','mouse','remote','keyboard','cell phone'],
+  '⚽ 運動': ['frisbee','skis','snowboard','sports ball','kite','baseball bat','baseball glove','skateboard','surfboard','tennis racket'],
+  '👜 配件': ['backpack','umbrella','handbag','tie','suitcase'],
+  '📦 其他': ['traffic light','fire hydrant','stop sign','parking meter','bench','book','clock','vase','scissors','teddy bear','hair drier','toothbrush'],
+};
+
+function getCategoryForLabel(cocoLabel) {
+  for (const [cat, labels] of Object.entries(CATEGORIES)) {
+    if (labels.includes(cocoLabel)) return cat;
+  }
+  return '📦 其他';
+}
 
 // ── COCO label → Chinese + English ──
 const LABELS = {
@@ -672,7 +711,7 @@ function cropFromImage(img, box, cocoLabel) {
   canvas.getContext('2d').drawImage(img, x, y, cw, ch, 0, 0, cw, ch);
 
   const label = getLabel(cocoLabel);
-  return { zh: label.zh, en: label.en, dataUrl: canvas.toDataURL('image/png') };
+  return { zh: label.zh, en: label.en, cocoLabel, category: getCategoryForLabel(cocoLabel), dataUrl: canvas.toDataURL('image/png') };
 }
 
 // ── Detection overlay ──
@@ -814,41 +853,21 @@ async function startExtraction() {
     // Phase 4: Display results
     progressArea.style.display = 'none';
     resultsArea.style.display = 'block';
-    resultsCount.textContent = `共偵測到 ${results.length} 個物件`;
 
-    for (let i = 0; i < results.length; i++) {
-      const r = results[i];
-      const pct = Math.round(r.score * 100);
-      const confClass = pct >= 90 ? 'high' : pct >= 75 ? 'medium' : 'low';
-
-      const card = document.createElement('div');
-      card.className = 'vocab-card';
-      card.innerHTML = `
-        <img class="card-img" src="${r.dataUrl}" alt="${r.zh}">
-        <div class="card-body">
-          <div class="label-row" data-idx="${i}">
-            <div class="label-zh">${r.zh}</div>
-            <div class="label-en">${r.en}</div>
-            <input class="label-edit label-edit-zh" type="text" value="${r.zh}" placeholder="中文名稱">
-            <input class="label-edit label-edit-en" type="text" value="${r.en}" placeholder="English name">
-            <span class="edit-hint">✏️ 編輯</span>
-          </div>
-          <div class="confidence">
-            <div class="conf-bar"><div class="conf-bar-fill ${confClass}" style="width:${pct}%"></div></div>
-            <span class="conf-text">${pct}%</span>
-          </div>
-          <div class="card-actions">
-            <button class="card-action-btn tts-btn" data-en="${r.en}" data-zh="${r.zh}" title="朗讀發音">🔊</button>
-            <button class="card-action-btn dl-btn" data-name="${r.zh}" title="下載圖片">⬇️ 下載</button>
-          </div>
-        </div>`;
-      resultGrid.appendChild(card);
+    // Dedup: count duplicates by label
+    const uniqueMap = new Map();
+    for (const r of currentResults) {
+      const key = r.cocoLabel || r.zh;
+      if (!uniqueMap.has(key)) { uniqueMap.set(key, { ...r, count: 1 }); }
+      else { uniqueMap.get(key).count++; }
     }
+    const uniqueResults = [...uniqueMap.values()];
+    const dupCount = currentResults.length - uniqueResults.length;
+    resultsCount.textContent = `共偵測到 ${currentResults.length} 個物件` + (dupCount > 0 ? `（${uniqueResults.length} 種）` : '');
 
-    if (results.length >= 2) {
-      dlAllWrap.style.display = 'block';
-    }
+    renderResults(currentViewMode);
 
+    if (currentResults.length >= 2) dlAllWrap.style.display = 'block';
     resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } catch (err) {
@@ -857,6 +876,85 @@ async function startExtraction() {
     console.error(err);
   } finally {
     goBtn.disabled = false;
+  }
+}
+
+// ── View mode & rendering ──
+let currentViewMode = 'grid';
+const viewGridBtn = document.getElementById('viewGrid');
+const viewCategoryBtn = document.getElementById('viewCategory');
+
+viewGridBtn.addEventListener('click', () => { setViewMode('grid'); });
+viewCategoryBtn.addEventListener('click', () => { setViewMode('category'); });
+
+function setViewMode(mode) {
+  currentViewMode = mode;
+  viewGridBtn.classList.toggle('active', mode === 'grid');
+  viewCategoryBtn.classList.toggle('active', mode === 'category');
+  if (currentResults.length > 0) renderResults(mode);
+}
+
+function buildCardHTML(r, i) {
+  const pct = Math.round(r.score * 100);
+  const confClass = pct >= 90 ? 'high' : pct >= 75 ? 'medium' : 'low';
+  const badge = r.count > 1 ? `<span class="dedup-badge">×${r.count}</span>` : '';
+  return `<div class="vocab-card" style="position:relative">
+    ${badge}
+    <img class="card-img" src="${r.dataUrl}" alt="${r.zh}">
+    <div class="card-body">
+      <div class="label-row" data-idx="${i}">
+        <div class="label-zh">${r.zh}</div>
+        <div class="label-en">${r.en}</div>
+        <input class="label-edit label-edit-zh" type="text" value="${r.zh}" placeholder="中文名稱">
+        <input class="label-edit label-edit-en" type="text" value="${r.en}" placeholder="English name">
+        <span class="edit-hint">✏️ 編輯</span>
+      </div>
+      <div class="confidence">
+        <div class="conf-bar"><div class="conf-bar-fill ${confClass}" style="width:${pct}%"></div></div>
+        <span class="conf-text">${pct}%</span>
+      </div>
+      <div class="card-actions">
+        <button class="card-action-btn tts-btn" data-en="${r.en}" data-zh="${r.zh}" title="朗讀發音">🔊</button>
+        <button class="card-action-btn dl-btn" data-name="${r.zh}" title="下載圖片">⬇️ 下載</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderResults(mode) {
+  resultGrid.innerHTML = '';
+
+  // Build deduped list
+  const uniqueMap = new Map();
+  for (const r of currentResults) {
+    const key = r.cocoLabel || r.zh;
+    if (!uniqueMap.has(key)) { uniqueMap.set(key, { ...r, count: 1 }); }
+    else { uniqueMap.get(key).count++; }
+  }
+  const items = [...uniqueMap.values()];
+
+  if (mode === 'category') {
+    // Group by category
+    const groups = new Map();
+    for (const r of items) {
+      const cat = r.category || '📦 其他';
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat).push(r);
+    }
+    let idx = 0;
+    for (const [cat, catItems] of groups) {
+      const group = document.createElement('div');
+      group.className = 'category-group';
+      group.innerHTML = `<div class="category-title">${cat}（${catItems.length}）</div><div class="result-grid">${catItems.map(r => buildCardHTML(r, idx++)).join('')}</div>`;
+      resultGrid.appendChild(group);
+    }
+    resultGrid.style.display = 'block';
+  } else {
+    resultGrid.style.display = '';
+    let idx = 0;
+    for (const r of items) {
+      resultGrid.insertAdjacentHTML('beforeend', buildCardHTML(r, idx++));
+    }
   }
 }
 
